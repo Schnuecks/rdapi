@@ -235,3 +235,17 @@ ul.codes { list-style: none; padding: 0; display: grid; grid-template-columns: r
 /* Passkeys im Konto */
 ul.passkeys li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .4rem 0; border-bottom: 1px solid var(--line); }
 ul.passkeys li form { margin: 0; }
+
+/* Reiter: Adressbücher, Verbindungen/Dateiübertragungen */
+.tabs { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; margin: -.25rem 0 1.25rem; border-bottom: 1px solid var(--line); }
+.tabs a { color: var(--muted); text-decoration: none; padding: .4rem 0; white-space: nowrap; }
+.tabs a:hover { color: var(--ink); }
+.tabs a[aria-current="page"] { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px var(--accent); }
+.pager a { text-decoration: none; }
+
+/* Freigaben und Gruppenmitglieder */
+ul.rule-list li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .35rem 0; border-bottom: 1px solid var(--line); }
+ul.rule-list li form { margin: 0; }
+fieldset.member-choice { border: 0; padding: 0; margin: 0; display: grid; gap: .35rem; }
+fieldset.member-choice legend { font-weight: 500; margin-bottom: .3rem; padding: 0; }
+.panel select { width: 100%; }

@@ -19,7 +19,8 @@
   </tbody>
 </table>
 </div>
-<section class="panel panel-narrow">
+<div class="panels">
+<section class="panel">
   <h2>{{ _('New user') }}</h2>
   <form method="post" action="/users/new">
     <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -30,4 +31,19 @@
     <button type="submit">{{ _('Create user') }}</button>
   </form>
 </section>
+<section class="panel" id="groups">
+  <h2>{{ _('Groups') }}</h2>
+  <p class="hint">{{ _('Members of a group see each other’s devices in the RustDesk app. Shared address books can also be given to a whole group.') }}</p>
+  {% if groups %}
+  <ul class="plain-list">
+    {% for g in groups %}<li><a href="/groups/{{ g.id }}">{{ g.name }}</a> <span class="hint small">· {{ _('{count} members', count=g.member_count) }}</span></li>{% endfor %}
+  </ul>
+  {% endif %}
+  <form method="post" action="/groups/new" class="inline-form panel-foot">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <input name="name" maxlength="100" placeholder="{{ _('New group') }}" aria-label="{{ _('New group') }}" required>
+    <button type="submit">{{ _('Add') }}</button>
+  </form>
+</section>
+</div>
 {% endblock %}

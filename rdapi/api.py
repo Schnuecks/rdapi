@@ -11,13 +11,12 @@ from __future__ import annotations
 
 import json
 import sqlite3
-import uuid
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
-from . import oidc
+from . import oidc, sharing
 from .config import Settings
 from .db import now, transaction
 from .deps import (
@@ -44,6 +43,7 @@ from .security import (
     token_hash,
     use_recovery_code,
 )
+from .sharing import personal_ab
 from .totp import verify_user_code
 
 router = APIRouter(prefix="/api")
@@ -583,19 +583,13 @@ async def audit_other(
 # --------------------------------------------------------------------------
 
 
-def _accessible_user_ids(conn: sqlite3.Connection, user: sqlite3.Row) -> list[int]:
-    if user["is_admin"]:
-        return [r["id"] for r in conn.execute("SELECT id FROM users WHERE enabled = 1")]
-    return [user["id"]]
-
-
 @router.get("/users")
 def users(
     request: Request,
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> dict[str, Any]:
-    ids = _accessible_user_ids(conn, user)
+    ids = sharing.accessible_user_ids(conn, user)
     offset, limit = paging(request)
     marks = ",".join("?" * len(ids))
     rows = conn.execute(
@@ -611,7 +605,7 @@ def peers(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> dict[str, Any]:
-    ids = _accessible_user_ids(conn, user)
+    ids = sharing.accessible_user_ids(conn, user)
     offset, limit = paging(request)
     marks = ",".join("?" * len(ids))
     total = conn.execute(
@@ -647,23 +641,13 @@ def device_groups(_: sqlite3.Row = Depends(current_user)) -> dict[str, Any]:
 # --------------------------------------------------------------------------
 
 
-def personal_ab(conn: sqlite3.Connection, user_id: int) -> str:
-    row = conn.execute("SELECT guid FROM address_books WHERE user_id = ?", (user_id,)).fetchone()
-    if row:
-        return row["guid"]
-    guid = str(uuid.uuid4())
-    conn.execute(
-        "INSERT OR IGNORE INTO address_books (guid, user_id, created_at) VALUES (?, ?, ?)",
-        (guid, user_id, now()),
-    )
-    return conn.execute("SELECT guid FROM address_books WHERE user_id = ?", (user_id,)).fetchone()[
-        "guid"
-    ]
-
-
-def own_ab(conn: sqlite3.Connection, user: sqlite3.Row, guid: str) -> str:
-    if not guid or guid != personal_ab(conn, user["id"]):
+def ab_access(conn: sqlite3.Connection, user: sqlite3.Row, guid: str, write: bool = False) -> str:
+    """Prüft das Recht auf ein Adressbuch: das eigene immer, geteilte nach Regel."""
+    book = sharing.book_for(conn, user, guid)
+    if book is None:
         raise ApiError(403, "No access to this address book.")
+    if write and not book.writable:
+        raise ApiError(403, "This address book is read-only for you.")
     return guid
 
 
@@ -747,8 +731,18 @@ def ab_personal(
 
 
 @router.post("/ab/shared/profiles")
-def ab_shared_profiles(_: sqlite3.Row = Depends(current_user)) -> dict[str, Any]:
-    return {"total": 0, "data": []}
+def ab_shared_profiles(
+    request: Request,
+    conn: sqlite3.Connection = Depends(get_db),
+    user: sqlite3.Row = Depends(current_user),
+) -> dict[str, Any]:
+    shared = sharing.shared_books(conn, user)
+    offset, limit = paging(request)
+    data = [
+        {"guid": b.guid, "name": b.name, "owner": b.owner, "note": b.note, "rule": b.rule}
+        for b in shared[offset : offset + limit]
+    ]
+    return {"total": len(shared), "data": data}
 
 
 @router.post("/ab/peers")
@@ -757,7 +751,7 @@ def ab_peers(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> dict[str, Any]:
-    guid = own_ab(conn, user, request.query_params.get("ab", ""))
+    guid = ab_access(conn, user, request.query_params.get("ab", ""))
     offset, limit = paging(request)
     total = conn.execute("SELECT COUNT(*) FROM ab_peers WHERE ab_guid = ?", (guid,)).fetchone()[0]
     rows = conn.execute(
@@ -773,7 +767,7 @@ def ab_tags(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> list[dict[str, Any]]:
-    own_ab(conn, user, guid)
+    ab_access(conn, user, guid)
     rows = conn.execute(
         "SELECT name, color FROM ab_tags WHERE ab_guid = ? ORDER BY position", (guid,)
     ).fetchall()
@@ -787,7 +781,7 @@ async def ab_peer_add(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> Response:
-    own_ab(conn, user, guid)
+    ab_access(conn, user, guid, write=True)
     peer = _peer_from_body(await body_json(request))
     with transaction(conn):
         save_peer(conn, guid, peer)
@@ -801,7 +795,7 @@ async def ab_peer_update(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> Response:
-    own_ab(conn, user, guid)
+    ab_access(conn, user, guid, write=True)
     changes = _peer_from_body(await body_json(request))
     with transaction(conn):
         peer = load_peer(conn, guid, changes["id"])
@@ -819,7 +813,7 @@ async def ab_peer_delete(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> Response:
-    own_ab(conn, user, guid)
+    ab_access(conn, user, guid, write=True)
     ids = await body_json(request)
     if not isinstance(ids, list):
         raise ApiError(400, "Expected a list of IDs.")
@@ -838,7 +832,7 @@ async def ab_tag_add(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> Response:
-    own_ab(conn, user, guid)
+    ab_access(conn, user, guid, write=True)
     name, color = _tag_from_body(await body_json(request))
     add_tag(conn, guid, name, color)
     return ok()
@@ -851,7 +845,7 @@ async def ab_tag_rename(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> Response:
-    own_ab(conn, user, guid)
+    ab_access(conn, user, guid, write=True)
     data = await body_dict(request)
     old, new = text(data.get("old"), 100), text(data.get("new"), 100)
     if not old or not new:
@@ -878,7 +872,7 @@ async def ab_tag_update(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> Response:
-    own_ab(conn, user, guid)
+    ab_access(conn, user, guid, write=True)
     name, color = _tag_from_body(await body_json(request))
     cur = conn.execute(
         "UPDATE ab_tags SET color = ? WHERE ab_guid = ? AND name = ?", (color, guid, name)
@@ -895,7 +889,7 @@ async def ab_tag_delete(
     conn: sqlite3.Connection = Depends(get_db),
     user: sqlite3.Row = Depends(current_user),
 ) -> Response:
-    own_ab(conn, user, guid)
+    ab_access(conn, user, guid, write=True)
     names = await body_json(request)
     if not isinstance(names, list):
         raise ApiError(400, "Expected a list of tags.")

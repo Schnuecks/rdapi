@@ -230,6 +230,52 @@ MIGRATIONS: list[str] = [
     );
     CREATE INDEX activity_created ON activity(created_at);
     """,
+    """
+    -- Benutzergruppen: Mitglieder einer Gruppe sehen in der App die Geräte der anderen.
+    CREATE TABLE user_groups (
+        id          INTEGER PRIMARY KEY,
+        name        TEXT    NOT NULL UNIQUE COLLATE NOCASE,
+        note        TEXT    NOT NULL DEFAULT '',
+        created_at  INTEGER NOT NULL
+    );
+    CREATE TABLE group_members (
+        group_id  INTEGER NOT NULL REFERENCES user_groups(id) ON DELETE CASCADE,
+        user_id   INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        PRIMARY KEY (group_id, user_id)
+    );
+    CREATE INDEX group_members_user ON group_members(user_id);
+
+    -- Adressbücher neu aufbauen: neben dem persönlichen (user_id gesetzt) gibt es
+    -- geteilte (user_id leer, mit Name). Läuft mit ausgeschalteten Fremdschlüsseln,
+    -- damit DROP TABLE die Einträge in ab_peers/ab_tags nicht mitlöscht.
+    CREATE TABLE address_books_new (
+        guid        TEXT    PRIMARY KEY,
+        user_id     INTEGER UNIQUE REFERENCES users(id) ON DELETE CASCADE,
+        name        TEXT    NOT NULL DEFAULT '',
+        note        TEXT    NOT NULL DEFAULT '',
+        created_by  INTEGER REFERENCES users(id) ON DELETE SET NULL,
+        created_at  INTEGER NOT NULL,
+        CHECK ((user_id IS NULL) = (name != ''))
+    );
+    INSERT INTO address_books_new (guid, user_id, created_at)
+        SELECT guid, user_id, created_at FROM address_books;
+    DROP TABLE address_books;
+    ALTER TABLE address_books_new RENAME TO address_books;
+
+    -- Wer ein geteiltes Adressbuch sieht: einzelne Benutzer oder ganze Gruppen.
+    -- rule wie in der App: 1 = lesen, 2 = lesen und ändern, 3 = volle Kontrolle.
+    CREATE TABLE ab_rules (
+        id        INTEGER PRIMARY KEY,
+        ab_guid   TEXT    NOT NULL REFERENCES address_books(guid) ON DELETE CASCADE,
+        user_id   INTEGER REFERENCES users(id) ON DELETE CASCADE,
+        group_id  INTEGER REFERENCES user_groups(id) ON DELETE CASCADE,
+        rule      INTEGER NOT NULL CHECK (rule IN (1, 2, 3)),
+        CHECK ((user_id IS NULL) != (group_id IS NULL))
+    );
+    CREATE UNIQUE INDEX ab_rules_user ON ab_rules(ab_guid, user_id) WHERE user_id IS NOT NULL;
+    CREATE UNIQUE INDEX ab_rules_group ON ab_rules(ab_guid, group_id) WHERE group_id IS NOT NULL;
+    CREATE INDEX audit_events_kind ON audit_events(kind, created_at);
+    """,
 ]
 
 
@@ -252,8 +298,14 @@ def init_db(path: str) -> None:
     try:
         conn.execute("PRAGMA journal_mode = WAL")
         version = conn.execute("PRAGMA user_version").fetchone()[0]
+        # Tabellen neu aufbauen geht nur ohne Fremdschlüssel-Prüfung (SQLite-Anleitung
+        # „Making Other Kinds Of Table Schema Changes“); danach wird alles geprüft.
+        conn.execute("PRAGMA foreign_keys = OFF")
         for index, script in enumerate(MIGRATIONS[version:], start=version + 1):
             conn.executescript(f"BEGIN;\n{script}\nPRAGMA user_version = {index};\nCOMMIT;")
+        broken = conn.execute("PRAGMA foreign_key_check").fetchall()
+        if broken:
+            raise RuntimeError(f"Database has broken references after migration: {broken[:5]}")
     finally:
         conn.close()
 

@@ -28,16 +28,25 @@ ist angemeldet. In der Weboberfläche steht derselbe Knopf auf der Anmeldeseite.
 - **Adressbuch:** Jeder Benutzer hat ein persönliches Adressbuch mit Tags. Änderungen in
   der App oder in der Weboberfläche werden auf dem Server gespeichert und erscheinen auf
   allen Geräten, auf denen du angemeldet bist.
+- **Geteilte Adressbücher:** Admins können weitere Adressbücher anlegen, z. B. „Familie“
+  oder „Büro“, und sie einzelnen Benutzern oder ganzen Gruppen geben: *nur lesen*,
+  *lesen und ändern* oder *volle Kontrolle*. Die App zeigt sie neben dem persönlichen
+  Adressbuch; bei „nur lesen“ kann sie nichts ändern. Gilt für jemanden mehreres, zählt
+  das höchste Recht. Admins sehen und verwalten alle geteilten Adressbücher.
 - **Geräte:** Jedes Gerät mit diesem API-Server meldet sich regelmäßig, auch ohne
   Anmeldung. Zugeordnet wird es über seine RustDesk-ID und eine interne Kennung, die die
   App mitschickt; kennt der Server die Kennung, ignoriert er Meldungen mit derselben ID,
   aber anderer Kennung. Ein Gerät gehört dem Benutzer, der sich zuletzt in der App darauf
   angemeldet hat, außer es gehört schon jemand anderem und die Kennung passt nicht; Admins
   können den Besitzer in der Weboberfläche ändern. In der App erscheinen deine Geräte unter
-  „Zugängliche Geräte“. Geräte ohne Besitzer, die sich 30 Tage nicht gemeldet haben,
+  „Zugängliche Geräte“, zusammen mit den Geräten aller, die mit dir in einer Gruppe sind;
+  Admins sehen dort alle Geräte. Geräte ohne Besitzer, die sich 30 Tage nicht gemeldet haben,
   werden entfernt.
 - **Verlauf:** Eingehende Verbindungen meldet das Gerät, mit dem verbunden wird, mit
   Beginn, Dauer, Art und der Adresse der Gegenseite. Nicht angenommene Versuche sind grau.
+  Auch Dateien, die während einer Verbindung auf oder von einem Gerät kopiert werden
+  (Dateiübertragung oder Kopieren und Einfügen von Dateien), werden festgehalten, mit
+  Richtung, Ordner, Anzahl und den ersten Dateinamen.
 
 ## Weboberfläche
 
@@ -47,14 +56,17 @@ der App an.
 - **Geräte:** Name, ID, Besitzer, Betriebssystem, Version und Online-Status; ein Klick
   zeigt Details wie CPU und Arbeitsspeicher, die letzten Verbindungen, eine Notiz und den
   Besitzer, den Admins ändern können
-- **Verlauf:** alle eingehenden Verbindungen, neueste zuerst, nach Gerät filterbar
+- **Verlauf:** alle eingehenden Verbindungen und auf einem zweiten Reiter alle
+  Dateiübertragungen, neueste zuerst, nach Gerät filterbar
 - **Adressbuch:** Einträge anlegen, bearbeiten und entfernen (ID, Alias, Notiz, Tags)
   und Tags mit ihren Farben verwalten; Felder, die nur die App kennt, z. B. gespeicherte
-  Passwörter, bleiben erhalten und werden nie angezeigt
+  Passwörter, bleiben erhalten und werden nie angezeigt. Die Reiter oben wechseln zwischen
+  dem eigenen und den geteilten Adressbüchern; Admins legen dort geteilte Adressbücher an
+  und bestimmen, wer sie sieht
 - **Benutzer** (nur Admins): Benutzer anlegen, bearbeiten, sperren und löschen, neue
-  Passwörter setzen, jemanden zum Admin machen
-- **Anmeldungen** (nur Admins): die letzten 200 Anmeldeversuche in App und
-  Weboberfläche, erfolgreich oder fehlgeschlagen, mit Zeit und Adresse
+  Passwörter setzen, jemanden zum Admin machen sowie Gruppen und ihre Mitglieder verwalten
+- **Anmeldungen** (nur Admins): alle Anmeldeversuche in App und Weboberfläche,
+  erfolgreich oder fehlgeschlagen, mit Zeit und Adresse, 20 je Seite
 - **Aktivität** (nur Admins): wer wann Benutzer, Geräte, Sicherungen oder die eigene
   Anmeldung (Passwort, Zwei-Faktor-Anmeldung, Passkeys) geändert hat, mit Adresse
 - **Sicherungen** (nur Admins): siehe [Sicherungen](#sicherungen)

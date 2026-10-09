@@ -1,12 +1,31 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Address book') }}{% endblock %}
 {% block main %}
-<h1>{{ _('My address book') }}</h1>
-<p class="page-hint">{{ _('The same address book as in the RustDesk app. Changes appear in the app the next time it synchronises.') }}</p>
+{% set q = '' if book.personal else '?book=' ~ (book.guid | urlencode) %}
+{% set amp = '&' if q else '?' %}
+<h1>{% if book.personal %}{{ _('My address book') }}{% else %}{{ book.name }}{% endif %}</h1>
+{% if books | length > 1 %}
+<nav class="tabs" aria-label="{{ _('Address books') }}">
+  {% for b in books %}
+  <a href="{{ '/address-book' if b.personal else '/address-book?book=' ~ (b.guid | urlencode) }}"{% if b.guid == book.guid %} aria-current="page"{% endif %}>
+    {% if b.personal %}{{ _('My address book') }}{% else %}{{ b.name }}{% endif %}
+  </a>
+  {% endfor %}
+</nav>
+{% endif %}
+<p class="page-hint">
+  {% if book.personal %}
+  {{ _('The same address book as in the RustDesk app. Changes appear in the app the next time it synchronises.') }}
+  {% else %}
+  {{ _('A shared address book. Everyone it is shared with sees it in the RustDesk app.') }}
+  {% if book.note %}<br>{{ book.note }}{% endif %}
+  <br><span class="badge">{{ _(RULES[book.rule]) }}</span>
+  {% endif %}
+</p>
 {% if peers %}
 <div class="table-wrap">
 <table>
-  <thead><tr><th>{{ _('ID') }}</th><th>{{ _('Alias') }}</th><th>{{ _('Hostname') }}</th><th>{{ _('Platform') }}</th><th>{{ _('Tags') }}</th><th>{{ _('Note') }}</th><th></th></tr></thead>
+  <thead><tr><th>{{ _('ID') }}</th><th>{{ _('Alias') }}</th><th>{{ _('Hostname') }}</th><th>{{ _('Platform') }}</th><th>{{ _('Tags') }}</th><th>{{ _('Note') }}</th>{% if book.writable %}<th></th>{% endif %}</tr></thead>
   <tbody>
   {% for p in peers %}
     <tr>
@@ -16,14 +35,17 @@
       <td>{{ p.platform or "–" }}</td>
       <td>{% for t in p.tags or [] %}<span class="tag" style="--tag: {{ colors.get(t, '#888888') }}">{{ t }}</span>{% endfor %}</td>
       <td>{{ p.note if p.note is string else "" }}</td>
+      {% if book.writable %}
       <td class="actions">
-        <a class="button quiet" href="/address-book?edit={{ p.id | urlencode }}#entry">{{ _('Edit') }}</a>
+        <a class="button quiet" href="/address-book{{ q }}{{ amp }}edit={{ p.id | urlencode }}#entry">{{ _('Edit') }}</a>
         <form method="post" action="/address-book/peers/delete" data-confirm="{{ _('Remove {id} from the address book?', id=p.id) }}">
           <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="book" value="{{ '' if book.personal else book.guid }}">
           <input type="hidden" name="peer_id" value="{{ p.id }}">
           <button type="submit" class="danger-quiet">{{ _('Remove') }}</button>
         </form>
       </td>
+      {% endif %}
     </tr>
   {% endfor %}
   </tbody>
@@ -33,11 +55,13 @@
 <p class="empty">{{ _('The address book is still empty.') }}</p>
 {% endif %}
 
+{% if book.writable %}
 <div class="panels">
   <section class="panel" id="entry">
     <h2>{% if edit %}{{ _('Edit entry') }}{% else %}{{ _('Add entry') }}{% endif %}</h2>
     <form method="post" action="/address-book/peers">
       <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="book" value="{{ '' if book.personal else book.guid }}">
       <input type="hidden" name="original" value="{{ edit.id if edit else '' }}">
       <label>{{ _('RustDesk ID') }} <input name="peer_id" value="{{ edit.id if edit else '' }}" maxlength="64" required></label>
       <label>{{ _('Alias') }} <input name="alias" value="{{ edit.alias if edit and edit.alias else '' }}" maxlength="100"></label>
@@ -51,7 +75,7 @@
       </fieldset>
       {% endif %}
       <button type="submit">{{ _('Save') }}</button>
-      {% if edit %}<a class="button quiet" href="/address-book">{{ _('Cancel') }}</a>{% endif %}
+      {% if edit %}<a class="button quiet" href="/address-book{{ q }}">{{ _('Cancel') }}</a>{% endif %}
     </form>
   </section>
   <section class="panel">
@@ -60,6 +84,7 @@
     <div class="tag-row">
       <form method="post" action="/address-book/tags" class="inline-form">
         <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="book" value="{{ '' if book.personal else book.guid }}">
         <input type="hidden" name="original" value="{{ t.name }}">
         <input type="color" name="color" value="{{ colors[t.name] }}" aria-label="{{ _('Colour') }}">
         <input name="name" value="{{ t.name }}" maxlength="100" aria-label="{{ _('Name') }}" required>
@@ -67,6 +92,7 @@
       </form>
       <form method="post" action="/address-book/tags/delete" data-confirm="{{ _('Delete the tag {name}? It is removed from all entries.', name=t.name) }}">
         <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="book" value="{{ '' if book.personal else book.guid }}">
         <input type="hidden" name="name" value="{{ t.name }}">
         <button type="submit" class="danger-quiet">{{ _('Delete') }}</button>
       </form>
@@ -76,10 +102,77 @@
     {% endfor %}
     <form method="post" action="/address-book/tags" class="inline-form panel-foot">
       <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="book" value="{{ '' if book.personal else book.guid }}">
       <input type="color" name="color" value="#4c9a2a" aria-label="{{ _('Colour') }}">
       <input name="name" maxlength="100" placeholder="{{ _('New tag') }}" aria-label="{{ _('New tag') }}" required>
       <button type="submit">{{ _('Add') }}</button>
     </form>
   </section>
 </div>
+{% endif %}
+
+{% if user.is_admin and book.personal %}
+<section class="panel panel-narrow">
+  <h2>{{ _('New shared address book') }}</h2>
+  <p class="hint">{{ _('For devices several people look after, e.g. the computers of the family. You decide who may see or change it.') }}</p>
+  <form method="post" action="/address-book/shared/new">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ _('Name') }} <input name="name" maxlength="100" required></label>
+    <label>{{ _('Note') }} <input name="note" maxlength="500"></label>
+    <button type="submit">{{ _('Create address book') }}</button>
+  </form>
+</section>
+{% endif %}
+
+{% if user.is_admin and not book.personal %}
+<div class="panels">
+  <section class="panel">
+    <h2>{{ _('Shared with') }}</h2>
+    {% if rules %}
+    <ul class="plain-list rule-list">
+      {% for r in rules %}
+      <li>
+        <span>{% if r.group_id %}<a href="/groups/{{ r.group_id }}">{{ _('Group {name}', name=r.group_name) }}</a>{% else %}<a href="/users/{{ r.user_id }}">{{ r.username }}</a>{% endif %}
+          · <span class="hint">{{ _(RULES[r.rule]) }}</span></span>
+        <form method="post" action="/address-book/shared/{{ book.guid | urlencode }}/rules/{{ r.id }}/delete">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="danger-quiet">{{ _('Remove') }}</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% else %}
+    <p class="hint">{{ _('Not shared with anyone yet. Only admins see it.') }}</p>
+    {% endif %}
+    <form method="post" action="/address-book/shared/{{ book.guid | urlencode }}/rules" class="panel-foot">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('User or group') }}
+        <select name="who" required>
+          <option value="">–</option>
+          {% if all_groups %}<optgroup label="{{ _('Groups') }}">{% for g in all_groups %}<option value="g:{{ g.id }}">{{ g.name }}</option>{% endfor %}</optgroup>{% endif %}
+          <optgroup label="{{ _('Users') }}">{% for u in all_users %}<option value="u:{{ u.id }}">{{ u.username }}</option>{% endfor %}</optgroup>
+        </select>
+      </label>
+      <label>{{ _('Permission') }}
+        <select name="rule">{% for value, label in RULES.items() %}<option value="{{ value }}">{{ _(label) }}</option>{% endfor %}</select>
+      </label>
+      <button type="submit">{{ _('Share') }}</button>
+      <p class="hint small">{{ _('“Read and change” and “Full control” may add, edit and remove entries and tags. If a user is covered several times, the highest permission counts.') }}</p>
+    </form>
+  </section>
+  <section class="panel">
+    <h2>{{ _('Settings') }}</h2>
+    <form method="post" action="/address-book/shared/{{ book.guid | urlencode }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('Name') }} <input name="name" value="{{ book.name }}" maxlength="100" required></label>
+      <label>{{ _('Note') }} <input name="note" value="{{ book.note }}" maxlength="500"></label>
+      <button type="submit">{{ _('Save') }}</button>
+    </form>
+    <form method="post" action="/address-book/shared/{{ book.guid | urlencode }}/delete" class="panel-foot" data-confirm="{{ _('Delete the address book {name} with all entries for everyone?', name=book.name) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="danger-quiet">{{ _('Delete address book') }}</button>
+    </form>
+  </section>
+</div>
+{% endif %}
 {% endblock %}

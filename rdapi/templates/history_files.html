@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ _('File transfers') }}{% endblock %}
+{% block main %}
+<h1>{{ _('Connection history') }}</h1>
+{% include "_history_tabs.html" %}
+<p class="page-hint">
+  {% if user.is_admin %}{{ _('Files copied to or from all devices during a connection.') }}{% else %}{{ _('Files copied to or from your devices during a connection.') }}{% endif %}
+  {% if device %}<br>{{ _('Filtered to device') }} <code>{{ device }}</code> · <a href="/history/files">{{ _('Clear filter') }}</a>{% endif %}
+</p>
+{% if rows %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>{{ _('Time') }}</th><th>{{ _('On device') }}</th><th>{{ _('From') }}</th><th>{{ _('Direction') }}</th><th>{{ _('Files') }}</th><th>{{ _('IP') }}</th></tr></thead>
+  <tbody>
+  {% for f in rows %}
+    <tr>
+      <td>{{ f.created_at | dt }}</td>
+      <td><a href="/devices/{{ f.device_id | urlencode }}"><code>{{ f.device_id }}</code></a>{% if f.hostname %} {{ f.hostname }}{% endif %}</td>
+      <td>{% if f.peer_id %}<code>{{ f.peer_id }}</code> {{ f.peer_name }}{% else %}–{% endif %}</td>
+      <td>{% if f.direction is not none %}{{ _(FILE_DIRECTIONS[f.direction]) }}{% else %}–{% endif %}</td>
+      <td class="small">
+        {% if f.path %}<code>{{ f.path }}</code><br>{% endif %}
+        {{ f.files | join(', ') }}{% if f.count > f.files | length %} {{ _('and {count} more', count=f.count - f.files | length) }}{% endif %}
+      </td>
+      <td class="small">{{ f.ip or "–" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">{{ _('No file transfers.') }}</p>
+{% endif %}
+{% set pager_query = 'device=' ~ (device | urlencode) ~ '&' if device else '' %}
+{% include "_pager.html" %}
+{% endblock %}

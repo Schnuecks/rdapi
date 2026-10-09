@@ -2,18 +2,13 @@
 {% block title %}{{ _('History') }}{% endblock %}
 {% block main %}
 <h1>{{ _('Connection history') }}</h1>
+{% include "_history_tabs.html" %}
 <p class="page-hint">
   {% if user.is_admin %}{{ _('Incoming connections to all devices.') }}{% else %}{{ _('Incoming connections to your devices.') }}{% endif %}
   {{ _('Grey rows are attempts that were not accepted.') }}
   {% if device %}<br>{{ _('Filtered to device') }} <code>{{ device }}</code> · <a href="/history">{{ _('Clear filter') }}</a>{% endif %}
 </p>
 {% include "_connections.html" %}
-{% if pages > 1 %}
-<p class="pager">
-  {% set q = 'device=' ~ (device | urlencode) ~ '&' if device else '' %}
-  {% if page > 1 %}<a href="?{{ q }}page={{ page - 1 }}">‹ {{ _('Newer') }}</a>{% endif %}
-  <span>{{ _('Page {page} of {pages} ({total} entries)', page=page, pages=pages, total=total) }}</span>
-  {% if page < pages %}<a href="?{{ q }}page={{ page + 1 }}">{{ _('Older') }} ›</a>{% endif %}
-</p>
-{% endif %}
+{% set pager_query = 'device=' ~ (device | urlencode) ~ '&' if device else '' %}
+{% include "_pager.html" %}
 {% endblock %}

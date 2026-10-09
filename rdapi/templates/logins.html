@@ -2,7 +2,7 @@
 {% block title %}{{ _('Logins') }}{% endblock %}
 {% block main %}
 <h1>{{ _('Logins') }}</h1>
-<p class="page-hint">{{ _('The last 200 sign-in attempts in the app and the web UI.') }}</p>
+<p class="page-hint">{{ _('Sign-in attempts in the app and the web UI, newest first.') }}</p>
 <div class="table-wrap">
 <table>
   <thead><tr><th>{{ _('Time') }}</th><th>{{ _('User') }}</th><th>{{ _('Via') }}</th><th>{{ _('IP') }}</th><th>{{ _('Result') }}</th><th>{{ _('Details') }}</th></tr></thead>
@@ -20,4 +20,5 @@
   </tbody>
 </table>
 </div>
+{% include "_pager.html" %}
 {% endblock %}

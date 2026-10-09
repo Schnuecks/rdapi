@@ -29,6 +29,7 @@
       <dt>{{ _('Last login') }}</dt><dd>{{ target.last_login_at | dt }}</dd>
       <dt>{{ _('Two-factor sign-in') }}</dt><dd>{% if target.totp_enabled %}{{ _('on') }}{% else %}{{ _('off') }}{% endif %}</dd>
       <dt>{{ _('Passkeys') }}</dt><dd>{{ passkey_count }}</dd>
+      <dt>{{ _('Groups') }}</dt><dd>{% for g in groups %}<a href="/groups/{{ g.id }}">{{ g.name }}</a>{% if not loop.last %}, {% endif %}{% else %}–{% endfor %}</dd>
       {% if sso_name %}<dt>{{ _('Single sign-on') }}</dt><dd>{% if target.oidc_sub %}{{ _('linked') }}{% else %}{{ _('not linked') }}{% endif %}</dd>{% endif %}
     </dl>
     {% if target.totp_enabled or passkey_count %}

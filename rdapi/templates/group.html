@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+{% block title %}{{ group.name }}{% endblock %}
+{% block main %}
+<a class="back" href="/users#groups">{{ _('Users') }}</a>
+<h1>{{ _('Group {name}', name=group.name) }}</h1>
+<p class="page-hint">{{ _('Members of a group see each other’s devices in the RustDesk app under “Accessible devices”. Admins always see all devices.') }}</p>
+<div class="panels">
+  <section class="panel">
+    <h2>{{ _('Edit') }}</h2>
+    <form method="post" action="/groups/{{ group.id }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('Name') }} <input name="name" value="{{ group.name }}" maxlength="100" required></label>
+      <label>{{ _('Note') }} <input name="note" value="{{ group.note }}" maxlength="500"></label>
+      <fieldset class="member-choice">
+        <legend>{{ _('Members') }}</legend>
+        {% for u in all_users %}
+        <label class="check"><input type="checkbox" name="members" value="{{ u.id }}"{% if u.id in members %} checked{% endif %}> {{ u.username }}{% if u.display_name %} <span class="hint small">· {{ u.display_name }}</span>{% endif %}</label>
+        {% endfor %}
+      </fieldset>
+      <button type="submit">{{ _('Save') }}</button>
+    </form>
+  </section>
+  <section class="panel">
+    <h2>{{ _('Shared address books') }}</h2>
+    {% if books %}
+    <ul class="plain-list">
+      {% for b in books %}<li><a href="/address-book?book={{ b.guid | urlencode }}">{{ b.name }}</a> <span class="hint small">· {{ _(RULES[b.rule]) }}</span></li>{% endfor %}
+    </ul>
+    {% else %}
+    <p class="hint">{{ _('None. You share an address book with this group on the page of the address book.') }}</p>
+    {% endif %}
+    <form method="post" action="/groups/{{ group.id }}/delete" class="panel-foot" data-confirm="{{ _('Delete the group {name}? Its members and their devices stay.', name=group.name) }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="danger-quiet">{{ _('Delete group') }}</button>
+    </form>
+  </section>
+</div>
+{% endblock %}
