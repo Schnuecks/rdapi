@@ -1,8 +1,19 @@
 # Changelog
 
-## Unreleased
+## 0.10.0
 
+- **Shared address books:** admins create address books such as “Family” or “Office” and
+  share them with users or groups (read only, read and change, full control). The RustDesk
+  app shows them next to the personal address book; the web interface switches between
+  them with tabs and keeps read-only books read-only.
+- **Groups:** members of a group see each other's devices in the app under “Accessible
+  devices”. Groups are managed on the users page and can receive shared address books.
+- **File transfers in the history:** files copied to or from a device during a connection
+  are shown on a new tab of the history, with direction, folder and file names.
+- **Logins** are shown 20 per page with page navigation instead of only the last 200.
 - **Unraid template** in `unraid/rdapi.xml`, described in the installation guide.
+- New database version 7; it is applied automatically on start and keeps all address
+  books.
 
 ## 0.9.0
 

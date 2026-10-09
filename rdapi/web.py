@@ -25,8 +25,8 @@ from fastapi.responses import (
 )
 from fastapi.templating import Jinja2Templates
 
-from . import __version__, backup, i18n, oidc, passkeys, secretbox
-from .api import add_tag, load_peer, personal_ab, rewrite_peer_tags, save_peer
+from . import __version__, backup, i18n, oidc, passkeys, secretbox, sharing
+from .api import add_tag, load_peer, rewrite_peer_tags, save_peer
 from .config import Settings
 from .db import connect, now, transaction
 from .deps import client_ip, get_db, limiter, public_limiter, settings
@@ -73,6 +73,7 @@ from .totp import (
 
 COOKIE = "rdapi_session"
 PAGE_SIZE = 50
+LOG_PAGE_SIZE = 20
 ONE_YEAR = 365 * 86400
 APP_REPO = "https://github.com/Schnuecks/rdapi"
 
@@ -103,6 +104,8 @@ MESSAGES = {
     "restored": "The backup has been restored.",
     "uploaded": "The backup has been uploaded. You can now restore it.",
     "passkey": "The passkey has been added.",
+    "created_ab": "The address book has been created. Now choose who may see it.",
+    "created_group": "The group has been created. Now add its members.",
 }
 
 
@@ -717,6 +720,86 @@ def device_delete(
 # --------------------------------------------------------------------------
 
 
+def _pages(total: int, page: int, size: int) -> tuple[int, int, int]:
+    """Seite (auf den gültigen Bereich begrenzt), Anzahl Seiten und Versatz."""
+    pages = max((total + size - 1) // size, 1)
+    page = min(max(page, 1), pages)
+    return page, pages, (page - 1) * size
+
+
+FILE_DIRECTIONS = {
+    0: "Copied from this device",
+    1: "Copied to this device",
+}
+
+
+def _file_event(row: sqlite3.Row) -> dict[str, Any]:
+    """Eine Dateiübertragung, wie die App sie meldet (Audit „file“), für die Anzeige."""
+    try:
+        data = json.loads(row["payload"])
+    except ValueError:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    try:
+        info = json.loads(data.get("info") or "{}")
+    except (TypeError, ValueError):
+        info = {}
+    if not isinstance(info, dict):
+        info = {}
+    files = [str(f[0]) for f in info.get("files") or [] if isinstance(f, list) and f and f[0]]
+    count = info.get("num") if isinstance(info.get("num"), int) else len(files)
+    return {
+        "created_at": row["created_at"],
+        "device_id": row["device_id"],
+        "hostname": row["hostname"],
+        "peer_id": str(data.get("peer_id") or ""),
+        "peer_name": str(info.get("name") or ""),
+        "ip": str(info.get("ip") or ""),
+        "direction": data.get("type") if data.get("type") in FILE_DIRECTIONS else None,
+        "path": str(data.get("path") or ""),
+        "count": count,
+        "files": files[:5],
+    }
+
+
+@router.get("/history/files", response_class=HTMLResponse)
+def history_files(
+    request: Request,
+    device: str = "",
+    page: int = 1,
+    user: sqlite3.Row = Depends(web_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> HTMLResponse:
+    where, params = ["a.kind = 'file'"], []
+    if not user["is_admin"]:
+        where.append("d.user_id = ?")
+        params.append(user["id"])
+    if device:
+        where.append("a.device_id = ?")
+        params.append(device)
+    base = "FROM audit_events a LEFT JOIN devices d ON d.id = a.device_id WHERE " + " AND ".join(
+        where
+    )
+    total = conn.execute(f"SELECT COUNT(*) {base}", params).fetchone()[0]
+    page, pages, offset = _pages(total, page, PAGE_SIZE)
+    rows = conn.execute(
+        f"SELECT a.*, d.hostname {base} ORDER BY a.created_at DESC, a.id DESC LIMIT ? OFFSET ?",
+        (*params, PAGE_SIZE, offset),
+    ).fetchall()
+    return render(
+        request,
+        "history_files.html",
+        user,
+        rows=[_file_event(r) for r in rows],
+        device=device,
+        page=page,
+        pages=pages,
+        total=total,
+        FILE_DIRECTIONS=FILE_DIRECTIONS,
+    )
+
+
 @router.get("/history", response_class=HTMLResponse)
 def history(
     request: Request,
@@ -735,12 +818,11 @@ def history(
     clause = (" WHERE " + " AND ".join(where)) if where else ""
     base = "FROM connections c LEFT JOIN devices d ON d.id = c.device_id" + clause
     total = conn.execute(f"SELECT COUNT(*) {base}", params).fetchone()[0]
-    page = max(page, 1)
+    page, pages, offset = _pages(total, page, PAGE_SIZE)
     rows = conn.execute(
         f"SELECT c.*, d.hostname {base} ORDER BY c.started_at DESC, c.id DESC LIMIT ? OFFSET ?",
-        (*params, PAGE_SIZE, (page - 1) * PAGE_SIZE),
+        (*params, PAGE_SIZE, offset),
     ).fetchall()
-    pages = max((total + PAGE_SIZE - 1) // PAGE_SIZE, 1)
     return render(
         request,
         "history.html",
@@ -755,7 +837,7 @@ def history(
 
 
 # --------------------------------------------------------------------------
-# Adressbuch: dasselbe persönliche Adressbuch wie in der App
+# Adressbücher: das persönliche wie in der App und die geteilten
 # --------------------------------------------------------------------------
 
 
@@ -771,52 +853,84 @@ def _color_int(value: str) -> int:
     return 0xFF000000 | int(value, 16)
 
 
+def _book(
+    conn: sqlite3.Connection, user: sqlite3.Row, guid: str, write: bool = False
+) -> sharing.Book:
+    """Gewähltes Adressbuch (leer = das persönliche); ohne Recht Forbidden."""
+    book = sharing.book_for(conn, user, guid or sharing.personal_ab(conn, user["id"]))
+    if book is None or (write and not book.writable):
+        raise Forbidden
+    return book
+
+
+def _ab_url(book: sharing.Book) -> str:
+    return "/address-book" if book.personal else f"/address-book?book={quote(book.guid)}"
+
+
 def _ab_page(
     request: Request,
     user: sqlite3.Row,
     conn: sqlite3.Connection,
+    book: sharing.Book,
     error: str | None = None,
     edit: dict[str, Any] | None = None,
 ) -> HTMLResponse:
-    guid = personal_ab(conn, user["id"])
     tags = conn.execute(
-        "SELECT name, color FROM ab_tags WHERE ab_guid = ? ORDER BY position", (guid,)
+        "SELECT name, color FROM ab_tags WHERE ab_guid = ? ORDER BY position", (book.guid,)
     ).fetchall()
     peers = [
         json.loads(r["data"])
         for r in conn.execute(
-            "SELECT data FROM ab_peers WHERE ab_guid = ? ORDER BY position", (guid,)
+            "SELECT data FROM ab_peers WHERE ab_guid = ? ORDER BY position", (book.guid,)
         )
     ]
     colors = {t["name"]: _color_hex(t["color"]) for t in tags}
+    admin_ctx: dict[str, Any] = {}
+    if user["is_admin"] and not book.personal:
+        admin_ctx = {
+            "rules": sharing.rules_of(conn, book.guid),
+            "all_users": conn.execute(
+                "SELECT id, username FROM users ORDER BY username"
+            ).fetchall(),
+            "all_groups": conn.execute(
+                "SELECT id, name FROM user_groups ORDER BY name COLLATE NOCASE"
+            ).fetchall(),
+        }
     return render(
         request,
         "address_book.html",
         user,
         status=400 if error else 200,
+        book=book,
+        books=sharing.books(conn, user),
         peers=peers,
         tags=tags,
         colors=colors,
         edit=edit,
         error=error,
+        RULES=sharing.RULES,
+        **admin_ctx,
     )
 
 
 @router.get("/address-book", response_class=HTMLResponse)
 def address_book(
     request: Request,
+    book: str = "",
     edit: str = "",
     user: sqlite3.Row = Depends(web_user),
     conn: sqlite3.Connection = Depends(get_db),
 ) -> HTMLResponse:
-    peer = load_peer(conn, personal_ab(conn, user["id"]), edit) if edit else None
-    return _ab_page(request, user, conn, edit=peer)
+    chosen = _book(conn, user, book)
+    peer = load_peer(conn, chosen.guid, edit) if edit and chosen.writable else None
+    return _ab_page(request, user, conn, chosen, edit=peer)
 
 
 @router.post("/address-book/peers")
 def address_book_save_peer(
     request: Request,
     csrf: str = Form(""),
+    book: str = Form(""),
     original: str = Form(""),
     peer_id: str = Form(""),
     alias: str = Form(""),
@@ -828,11 +942,12 @@ def address_book_save_peer(
     """Neuer Eintrag oder Änderung. Felder, die nur die App kennt (z. B. gespeicherte
     Passwörter), bleiben beim Ändern erhalten."""
     check_csrf(user, csrf)
+    chosen = _book(conn, user, book, write=True)
+    guid = chosen.guid
     peer_id = "".join(peer_id.split())[:64]
     if not peer_id:
-        return _ab_page(request, user, conn, _("Please enter the RustDesk ID."))
+        return _ab_page(request, user, conn, chosen, _("Please enter the RustDesk ID."))
     with transaction(conn):
-        guid = personal_ab(conn, user["id"])
         known = {
             r["name"] for r in conn.execute("SELECT name FROM ab_tags WHERE ab_guid = ?", (guid,))
         }
@@ -853,27 +968,29 @@ def address_book_save_peer(
             )
             save_peer(conn, guid, peer)
     if error:
-        return _ab_page(request, user, conn, error)
-    return redirect("/address-book", "saved")
+        return _ab_page(request, user, conn, chosen, error)
+    return redirect(_ab_url(chosen), "saved")
 
 
 @router.post("/address-book/peers/delete")
 def address_book_delete_peer(
     csrf: str = Form(""),
+    book: str = Form(""),
     peer_id: str = Form(""),
     user: sqlite3.Row = Depends(web_user),
     conn: sqlite3.Connection = Depends(get_db),
 ) -> Response:
     check_csrf(user, csrf)
-    guid = personal_ab(conn, user["id"])
-    conn.execute("DELETE FROM ab_peers WHERE ab_guid = ? AND peer_id = ?", (guid, peer_id))
-    return redirect("/address-book", "deleted")
+    chosen = _book(conn, user, book, write=True)
+    conn.execute("DELETE FROM ab_peers WHERE ab_guid = ? AND peer_id = ?", (chosen.guid, peer_id))
+    return redirect(_ab_url(chosen), "deleted")
 
 
 @router.post("/address-book/tags")
 def address_book_save_tag(
     request: Request,
     csrf: str = Form(""),
+    book: str = Form(""),
     original: str = Form(""),
     name: str = Form(""),
     color: str = Form(""),
@@ -882,11 +999,12 @@ def address_book_save_tag(
 ) -> Response:
     """Neuer Tag oder Umbenennen/Umfärben; beim Umbenennen ändern sich alle Einträge mit."""
     check_csrf(user, csrf)
+    chosen = _book(conn, user, book, write=True)
+    guid = chosen.guid
     name = name.strip()[:100]
     if not name:
-        return _ab_page(request, user, conn, _("Please enter a name for the tag."))
+        return _ab_page(request, user, conn, chosen, _("Please enter a name for the tag."))
     with transaction(conn):
-        guid = personal_ab(conn, user["id"])
         exists = conn.execute(
             "SELECT 1 FROM ab_tags WHERE ab_guid = ? AND name = ?", (guid, name)
         ).fetchone()
@@ -902,22 +1020,149 @@ def address_book_save_tag(
                 rewrite_peer_tags(conn, guid, lambda ts: [name if t == original else t for t in ts])
             add_tag(conn, guid, name, _color_int(color))
     if error:
-        return _ab_page(request, user, conn, error)
-    return redirect("/address-book", "saved")
+        return _ab_page(request, user, conn, chosen, error)
+    return redirect(_ab_url(chosen), "saved")
 
 
 @router.post("/address-book/tags/delete")
 def address_book_delete_tag(
     csrf: str = Form(""),
+    book: str = Form(""),
     name: str = Form(""),
     user: sqlite3.Row = Depends(web_user),
     conn: sqlite3.Connection = Depends(get_db),
 ) -> Response:
     check_csrf(user, csrf)
+    chosen = _book(conn, user, book, write=True)
     with transaction(conn):
-        guid = personal_ab(conn, user["id"])
-        conn.execute("DELETE FROM ab_tags WHERE ab_guid = ? AND name = ?", (guid, name))
-        rewrite_peer_tags(conn, guid, lambda ts: [t for t in ts if t != name])
+        conn.execute("DELETE FROM ab_tags WHERE ab_guid = ? AND name = ?", (chosen.guid, name))
+        rewrite_peer_tags(conn, chosen.guid, lambda ts: [t for t in ts if t != name])
+    return redirect(_ab_url(chosen), "deleted")
+
+
+# Geteilte Adressbücher verwalten (nur Admins)
+
+
+def _shared_book(conn: sqlite3.Connection, user: sqlite3.Row, guid: str) -> sharing.Book:
+    book = sharing.book_for(conn, user, guid)
+    if book is None or book.personal:
+        raise Forbidden
+    return book
+
+
+@router.post("/address-book/shared/new")
+def shared_book_create(
+    request: Request,
+    csrf: str = Form(""),
+    name: str = Form(""),
+    note: str = Form(""),
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    check_csrf(user, csrf)
+    name = name.strip()[:100]
+    if not name:
+        own = _book(conn, user, "")
+        return _ab_page(request, user, conn, own, _("Please enter a name for the address book."))
+    with transaction(conn):
+        guid = sharing.create_shared(conn, name, note.strip()[:500], user["id"])
+        log_activity(conn, user, "ab_created", name, ip=client_ip(request))
+    return redirect(f"/address-book?book={quote(guid)}", "created_ab")
+
+
+@router.post("/address-book/shared/{guid}")
+def shared_book_update(
+    request: Request,
+    guid: str,
+    csrf: str = Form(""),
+    name: str = Form(""),
+    note: str = Form(""),
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    check_csrf(user, csrf)
+    book = _shared_book(conn, user, guid)
+    name = name.strip()[:100]
+    if not name:
+        return _ab_page(request, user, conn, book, _("Please enter a name for the address book."))
+    conn.execute(
+        "UPDATE address_books SET name = ?, note = ? WHERE guid = ?",
+        (name, note.strip()[:500], guid),
+    )
+    if name != book.name:
+        detail = f"name: {book.name} -> {name}"
+        log_activity(conn, user, "ab_changed", name, detail, client_ip(request))
+    return redirect(_ab_url(book), "saved")
+
+
+@router.post("/address-book/shared/{guid}/rules")
+def shared_book_add_rule(
+    request: Request,
+    guid: str,
+    csrf: str = Form(""),
+    who: str = Form(""),
+    rule: int = Form(sharing.READ),
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    """who ist „u:<id>“ für einen Benutzer oder „g:<id>“ für eine Gruppe."""
+    check_csrf(user, csrf)
+    book = _shared_book(conn, user, guid)
+    kind, _sep, raw_id = who.partition(":")
+    target = None
+    if rule in sharing.RULES and raw_id.isdigit():
+        if kind == "u":
+            target = conn.execute("SELECT username FROM users WHERE id = ?", (int(raw_id),))
+        elif kind == "g":
+            target = conn.execute("SELECT name FROM user_groups WHERE id = ?", (int(raw_id),))
+    row = target.fetchone() if target is not None else None
+    if row is None:
+        return _ab_page(request, user, conn, book, _("Please choose a user or group."))
+    with transaction(conn):
+        if kind == "u":
+            sharing.set_rule(conn, guid, rule, int(raw_id), None)
+            who_text = row[0]
+        else:
+            sharing.set_rule(conn, guid, rule, None, int(raw_id))
+            who_text = f"group {row[0]}"
+        detail = f"{who_text}: {sharing.RULES[rule]}"
+        log_activity(conn, user, "ab_shared", book.name, detail, client_ip(request))
+    return redirect(_ab_url(book), "saved")
+
+
+@router.post("/address-book/shared/{guid}/rules/{rule_id}/delete")
+def shared_book_delete_rule(
+    request: Request,
+    guid: str,
+    rule_id: int,
+    csrf: str = Form(""),
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    check_csrf(user, csrf)
+    book = _shared_book(conn, user, guid)
+    row = next((r for r in sharing.rules_of(conn, guid) if r["id"] == rule_id), None)
+    if row is not None:
+        with transaction(conn):
+            conn.execute("DELETE FROM ab_rules WHERE id = ?", (rule_id,))
+            who_text = row["username"] if row["user_id"] else f"group {row['group_name']}"
+            log_activity(conn, user, "ab_unshared", book.name, who_text, client_ip(request))
+    return redirect(_ab_url(book), "deleted")
+
+
+@router.post("/address-book/shared/{guid}/delete")
+def shared_book_delete(
+    request: Request,
+    guid: str,
+    csrf: str = Form(""),
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    check_csrf(user, csrf)
+    book = _shared_book(conn, user, guid)
+    with transaction(conn):
+        conn.execute("DELETE FROM address_books WHERE guid = ? AND user_id IS NULL", (guid,))
+        log_activity(conn, user, "ab_deleted", book.name, ip=client_ip(request))
     return redirect("/address-book", "deleted")
 
 
@@ -1129,8 +1374,18 @@ def _users_page(
         "SELECT u.*, (SELECT COUNT(*) FROM devices d WHERE d.user_id = u.id) AS device_count"
         " FROM users u ORDER BY u.username"
     ).fetchall()
+    groups = conn.execute(
+        "SELECT g.*, (SELECT COUNT(*) FROM group_members m WHERE m.group_id = g.id)"
+        " AS member_count FROM user_groups g ORDER BY g.name COLLATE NOCASE"
+    ).fetchall()
     return render(
-        request, "users.html", user, status=400 if error else 200, users=users, error=error
+        request,
+        "users.html",
+        user,
+        status=400 if error else 200,
+        users=users,
+        groups=groups,
+        error=error,
     )
 
 
@@ -1191,6 +1446,11 @@ def _user_page(
     devices = conn.execute(
         "SELECT * FROM devices WHERE user_id = ? ORDER BY id", (target["id"],)
     ).fetchall()
+    groups = conn.execute(
+        "SELECT g.id, g.name FROM user_groups g JOIN group_members m ON m.group_id = g.id"
+        " WHERE m.user_id = ? ORDER BY g.name COLLATE NOCASE",
+        (target["id"],),
+    ).fetchall()
     return render(
         request,
         "user.html",
@@ -1198,6 +1458,7 @@ def _user_page(
         status=400 if error else 200,
         target=target,
         devices=devices,
+        groups=groups,
         passkey_count=passkeys.count(conn, target["id"]),
         error=error,
     )
@@ -1315,6 +1576,149 @@ def users_delete(
     return redirect("/users", "deleted")
 
 
+# --------------------------------------------------------------------------
+# Gruppen (nur Admins): Mitglieder sehen in der App die Geräte der anderen
+# --------------------------------------------------------------------------
+
+
+def _group_or_403(conn: sqlite3.Connection, group_id: int) -> sqlite3.Row:
+    row = conn.execute("SELECT * FROM user_groups WHERE id = ?", (group_id,)).fetchone()
+    if row is None:
+        raise Forbidden
+    return row
+
+
+def _group_page(
+    request: Request,
+    user: sqlite3.Row,
+    conn: sqlite3.Connection,
+    group: sqlite3.Row,
+    error: str | None = None,
+) -> HTMLResponse:
+    members = {
+        r[0]
+        for r in conn.execute(
+            "SELECT user_id FROM group_members WHERE group_id = ?", (group["id"],)
+        )
+    }
+    books = conn.execute(
+        "SELECT b.guid, b.name, r.rule FROM ab_rules r JOIN address_books b ON b.guid = r.ab_guid"
+        " WHERE r.group_id = ? ORDER BY b.name COLLATE NOCASE",
+        (group["id"],),
+    ).fetchall()
+    return render(
+        request,
+        "group.html",
+        user,
+        status=400 if error else 200,
+        group=group,
+        members=members,
+        all_users=conn.execute("SELECT id, username, display_name FROM users ORDER BY username"),
+        books=books,
+        RULES=sharing.RULES,
+        error=error,
+    )
+
+
+@router.post("/groups/new")
+def groups_create(
+    request: Request,
+    csrf: str = Form(""),
+    name: str = Form(""),
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    check_csrf(user, csrf)
+    name = name.strip()[:100]
+    if not name:
+        return _users_page(request, user, conn, _("Please enter a name for the group."))
+    try:
+        with transaction(conn):
+            cur = conn.execute(
+                "INSERT INTO user_groups (name, created_at) VALUES (?, ?)", (name, now())
+            )
+            log_activity(conn, user, "group_created", name, ip=client_ip(request))
+    except sqlite3.IntegrityError:
+        return _users_page(request, user, conn, _("This group already exists."))
+    return redirect(f"/groups/{cur.lastrowid}", "created_group")
+
+
+@router.get("/groups/{group_id}", response_class=HTMLResponse)
+def groups_detail(
+    request: Request,
+    group_id: int,
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> HTMLResponse:
+    return _group_page(request, user, conn, _group_or_403(conn, group_id))
+
+
+@router.post("/groups/{group_id}")
+def groups_update(
+    request: Request,
+    group_id: int,
+    csrf: str = Form(""),
+    name: str = Form(""),
+    note: str = Form(""),
+    members: list[int] = Form([]),
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    check_csrf(user, csrf)
+    group = _group_or_403(conn, group_id)
+    name = name.strip()[:100]
+    if not name:
+        return _group_page(request, user, conn, group, _("Please enter a name for the group."))
+    before = {
+        r[0]
+        for r in conn.execute(
+            "SELECT u.username FROM group_members m JOIN users u ON u.id = m.user_id"
+            " WHERE m.group_id = ?",
+            (group_id,),
+        )
+    }
+    try:
+        with transaction(conn):
+            conn.execute(
+                "UPDATE user_groups SET name = ?, note = ? WHERE id = ?",
+                (name, note.strip()[:500], group_id),
+            )
+            sharing.set_members(conn, group_id, members)
+            after = {
+                r[0]
+                for r in conn.execute(
+                    "SELECT u.username FROM group_members m JOIN users u ON u.id = m.user_id"
+                    " WHERE m.group_id = ?",
+                    (group_id,),
+                )
+            }
+            changes = [f"name: {group['name']} -> {name}"] if name != group["name"] else []
+            changes += [f"+{n}" for n in sorted(after - before)]
+            changes += [f"-{n}" for n in sorted(before - after)]
+            if changes:
+                detail = ", ".join(changes)
+                log_activity(conn, user, "group_changed", name, detail, client_ip(request))
+    except sqlite3.IntegrityError:
+        return _group_page(request, user, conn, group, _("This group already exists."))
+    return redirect(f"/groups/{group_id}", "saved")
+
+
+@router.post("/groups/{group_id}/delete")
+def groups_delete(
+    request: Request,
+    group_id: int,
+    csrf: str = Form(""),
+    user: sqlite3.Row = Depends(admin_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    check_csrf(user, csrf)
+    group = _group_or_403(conn, group_id)
+    with transaction(conn):
+        conn.execute("DELETE FROM user_groups WHERE id = ?", (group_id,))
+        log_activity(conn, user, "group_deleted", group["name"], ip=client_ip(request))
+    return redirect("/users", "deleted")
+
+
 ACTIVITY = {
     "password_changed": "Changed own password",
     "2fa_on": "Turned on two-factor sign-in",
@@ -1333,6 +1737,14 @@ ACTIVITY = {
     "backup_downloaded": "Downloaded a backup",
     "backup_uploaded": "Uploaded a backup",
     "backup_restored": "Restored a backup",
+    "group_created": "Created a group",
+    "group_changed": "Changed a group",
+    "group_deleted": "Deleted a group",
+    "ab_created": "Created a shared address book",
+    "ab_changed": "Changed a shared address book",
+    "ab_shared": "Shared an address book",
+    "ab_unshared": "Stopped sharing an address book",
+    "ab_deleted": "Deleted a shared address book",
 }
 
 
@@ -1349,11 +1761,16 @@ def activity_log(
 @router.get("/logins", response_class=HTMLResponse)
 def login_log(
     request: Request,
+    page: int = 1,
     user: sqlite3.Row = Depends(admin_user),
     conn: sqlite3.Connection = Depends(get_db),
 ) -> HTMLResponse:
-    rows = conn.execute("SELECT * FROM login_events ORDER BY id DESC LIMIT 200").fetchall()
-    return render(request, "logins.html", user, rows=rows)
+    total = conn.execute("SELECT COUNT(*) FROM login_events").fetchone()[0]
+    page, pages, offset = _pages(total, page, LOG_PAGE_SIZE)
+    rows = conn.execute(
+        "SELECT * FROM login_events ORDER BY id DESC LIMIT ? OFFSET ?", (LOG_PAGE_SIZE, offset)
+    ).fetchall()
+    return render(request, "logins.html", user, rows=rows, page=page, pages=pages, total=total)
 
 
 # --------------------------------------------------------------------------

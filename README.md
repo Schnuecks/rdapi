@@ -35,9 +35,12 @@ devices and a history of incoming connections, plus a web interface to manage it
   users
 - **Address book** per user with tags, synchronised between all devices you sign in on and
   editable in the web interface as well
+- **Shared address books** for the family or the team, per user or group with read only,
+  read and change or full control
 - **Device list** with online status, operating system and version; the app shows your
-  devices under “Accessible devices”
-- **Connection history:** who connected to which device, when and for how long
+  devices and those of your **groups** under “Accessible devices”
+- **Connection history:** who connected to which device, when and for how long, plus the
+  files copied during a connection
 - **Web interface** for devices, history, address book, users, sign-ins and your account,
   in six languages (English, German, French, Spanish, Italian, Dutch), light and dark theme
 - **Two-factor sign-in** with an authenticator app, in the web interface and in the

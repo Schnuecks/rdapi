@@ -138,10 +138,51 @@ PEERS = [
 ]
 
 
+SHARED_PEERS = [
+    {
+        "id": "567123890",
+        "alias": "Mum's laptop",
+        "hostname": "Mum-Laptop",
+        "platform": "Windows",
+        "tags": ["parents"],
+    },
+    {
+        "id": "678234901",
+        "alias": "Dad's PC",
+        "hostname": "Dad-PC",
+        "platform": "Windows",
+        "tags": ["parents"],
+    },
+]
+
+FILE_TRANSFERS = [
+    # Gerät, Gegenstelle, Name, Richtung (0 = vom Gerät, 1 = aufs Gerät), vor (s), Pfad, Dateien
+    (
+        "123456789",
+        "987654321",
+        "Laptop-Alex",
+        1,
+        2 * HOUR,
+        "C:/Users/alex/Downloads",
+        [["invoice-2026-09.pdf", 182_000]],
+    ),
+    (
+        "234567891",
+        "987654321",
+        "Laptop-Alex",
+        0,
+        26 * HOUR,
+        "/srv/media/photos",
+        [["IMG_0412.jpg", 4_200_000], ["IMG_0413.jpg", 3_900_000], ["IMG_0414.jpg", 4_100_000]],
+    ),
+]
+
+
 def seed(db_path: str) -> None:
-    from rdapi.api import add_tag, personal_ab, save_peer
+    from rdapi.api import add_tag, save_peer
     from rdapi.db import connect, init_db, now
     from rdapi.security import create_user, log_login
+    from rdapi.sharing import create_shared, personal_ab, set_members, set_rule
 
     init_db(db_path)
     conn = connect(db_path)
@@ -193,6 +234,31 @@ def seed(db_path: str) -> None:
         add_tag(conn, guid, name, color)
     for peer in PEERS:
         save_peer(conn, guid, peer)
+    # Gruppe „Family“ und ein geteiltes Adressbuch für sie.
+    family = conn.execute(
+        "INSERT INTO user_groups (name, note, created_at) VALUES ('Family', '', ?)", (ts,)
+    ).lastrowid
+    set_members(conn, family, [ids["admin"], ids["sam"]])
+    shared = create_shared(conn, "Parents", "Computers at mum and dad's", ids["admin"])
+    add_tag(conn, shared, "parents", 0xFFE4572E)
+    for peer in SHARED_PEERS:
+        save_peer(conn, shared, peer)
+    set_rule(conn, shared, 2, None, family)
+    for dev, peer, peer_name, kind, ago, path, files in FILE_TRANSFERS:
+        info = {"ip": "198.51.100.23", "name": peer_name, "num": len(files), "files": files}
+        payload = {
+            "id": dev,
+            "peer_id": peer,
+            "type": kind,
+            "path": path,
+            "is_file": len(files) == 1,
+            "info": json.dumps(info),
+        }
+        conn.execute(
+            "INSERT INTO audit_events (kind, device_id, payload, created_at)"
+            " VALUES ('file', ?, ?, ?)",
+            (dev, json.dumps(payload), ts - ago),
+        )
     for ago, user, src, ok in (
         (20 * 60, "admin", "web", True),
         (50 * 60, "admin", "app", True),

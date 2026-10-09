@@ -1,0 +1,8 @@
+{% if pages > 1 %}
+{% set pq = pager_query | default('') %}
+<nav class="pager" aria-label="{{ _('Pages') }}">
+  {% if page > 1 %}<a href="?{{ pq }}page=1" aria-label="{{ _('First page') }}">«</a><a href="?{{ pq }}page={{ page - 1 }}">‹ {{ _('Newer') }}</a>{% endif %}
+  <span>{{ _('Page {page} of {pages} ({total} entries)', page=page, pages=pages, total=total) }}</span>
+  {% if page < pages %}<a href="?{{ pq }}page={{ page + 1 }}">{{ _('Older') }} ›</a><a href="?{{ pq }}page={{ pages }}" aria-label="{{ _('Last page') }}">»</a>{% endif %}
+</nav>
+{% endif %}

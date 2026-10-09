@@ -26,16 +26,24 @@ page.
 - **Address book:** every user has a personal address book with tags. Changes in the app
   or in the web interface are saved on the server and appear on all devices you are
   signed in on.
+- **Shared address books:** admins can create further address books, e.g. “Family” or
+  “Office”, and share them with single users or whole groups: *read only*, *read and
+  change* or *full control*. The app shows them next to the personal address book; with
+  “read only”, it cannot change them. If a user is covered several times, the highest
+  permission counts. Admins see and manage all shared address books.
 - **Devices:** every device with this API server reports itself regularly, also without
   a sign-in. It is matched by its RustDesk ID and an internal key the app sends along;
   once the server knows the key, reports with the same ID but a different key are
   ignored. A device belongs to the user who last signed in to the app on it, unless it
   already belongs to someone else and the key does not match; admins can change the owner
-  in the web interface. In the app, your devices appear under “Accessible devices”.
-  Devices without an owner that have not reported for 30 days are removed.
+  in the web interface. In the app, your devices appear under “Accessible devices”,
+  together with the devices of everyone who shares a group with you; admins see all
+  devices there. Devices without an owner that have not reported for 30 days are removed.
 - **History:** incoming connections are recorded by the device that is connected to, with
   start, duration, type and the address of the other side. Attempts that were not
-  accepted are shown in grey.
+  accepted are shown in grey. Files copied to or from a device during a connection
+  (file transfer or copy and paste of files) are recorded as well, with direction,
+  folder, number of files and the first file names.
 
 ## Web interface
 
@@ -45,14 +53,16 @@ app.
 - **Devices:** name, ID, owner, operating system, version and online status; a click
   shows details such as CPU and memory, the latest connections, a note and the owner,
   which admins can change
-- **History:** all incoming connections, newest first, filterable by device
+- **History:** all incoming connections and, on a second tab, all file transfers, newest
+  first, filterable by device
 - **Address book:** add, edit and remove entries (ID, alias, note, tags) and manage
   tags with their colours; fields only the app knows, such as saved passwords, are kept
-  and never shown
+  and never shown. The tabs at the top switch between your own and the shared address
+  books; admins create shared address books there and choose who may see them
 - **Users** (admins only): create, edit, disable and delete users, set new passwords,
-  make someone an admin
-- **Logins** (admins only): the last 200 sign-in attempts in the app and the web
-  interface, successful or failed, with time and address
+  make someone an admin, and manage groups and their members
+- **Logins** (admins only): all sign-in attempts in the app and the web interface,
+  successful or failed, with time and address, 20 per page
 - **Activity** (admins only): who changed users, devices, backups or their own sign-in
   (password, two-factor sign-in, passkeys), and when, with the address
 - **Backups** (admins only): see [Backups](#backups)

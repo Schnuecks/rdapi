@@ -170,7 +170,7 @@ def _source_texts() -> set[str]:
     import re
     from pathlib import Path
 
-    from rdapi import backup, i18n, oidc, passkeys, security, web
+    from rdapi import backup, i18n, oidc, passkeys, security, sharing, web
 
     root = Path(web.__file__).parent
     keys = set()
@@ -185,6 +185,7 @@ def _source_texts() -> set[str]:
     keys |= set(oidc.MESSAGES)
     keys |= set(passkeys.MESSAGES)
     keys |= set(web.ACTIVITY.values())
+    keys |= set(sharing.RULES.values()) | set(web.FILE_DIRECTIONS.values())
     keys.add("unknown")  # Art einer Verbindung, die die App nicht kennt (_connections.html)
     keys |= {
         security.password_problem("x"),
