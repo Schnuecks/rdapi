@@ -173,7 +173,7 @@ pre { overflow-x: auto; font-size: .85rem; margin: 1rem 0 0; }
 .table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 1.25rem; }
 table { width: 100%; border-collapse: collapse; }
 th, td { text-align: left; padding: .55rem .8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
-th { font: 600 .78rem/1.2 var(--font); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+th { font: 600 .78rem/1.2 var(--font); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; hyphens: auto; overflow-wrap: break-word; }
 tr:last-child td { border-bottom: 0; }
 tr.dim td { color: var(--muted); }
 td form { margin: 0; }
@@ -233,8 +233,10 @@ ul.codes { list-style: none; padding: 0; display: grid; grid-template-columns: r
 .login-form-actions { display: flex; gap: 1rem; align-items: center; }
 
 /* Passkeys im Konto */
-ul.passkeys li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .4rem 0; border-bottom: 1px solid var(--line); }
-ul.passkeys li form { margin: 0; }
+ul.item-list { list-style: none; padding: 0; }
+ul.item-list li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .5rem 0; border-bottom: 1px solid var(--line); }
+ul.item-list li > span { min-width: 0; overflow-wrap: anywhere; }
+ul.item-list li form { margin: 0; flex: none; }
 
 /* Reiter: Adressbücher, Verbindungen/Dateiübertragungen */
 .tabs { display: flex; flex-wrap: wrap; gap: .25rem 1.25rem; margin: -.25rem 0 1.25rem; border-bottom: 1px solid var(--line); }
@@ -255,5 +257,6 @@ fieldset.member-choice legend { font-weight: 500; margin-bottom: .3rem; padding:
 .panel > h2 + .hint { margin-bottom: 1rem; }
 .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; }
 ul.rule-list { list-style: none; padding: 0; margin: 0; }
-.book-rule { margin: -.75rem 0 1.25rem; }
-.book-rule .badge { background: var(--surface); border: 1px solid var(--line); }
+.row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; flex: none; }
+.row-actions form { margin: 0; }
+ul.item-list li:last-child { border-bottom: 0; }

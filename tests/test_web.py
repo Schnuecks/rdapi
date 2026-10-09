@@ -328,3 +328,19 @@ def test_cli_setup_code(cfg, monkeypatch, capsys):
     conn.close()
     with pytest.raises(SystemExit):
         cli.main(["setup-code"])
+
+
+def test_session_list_shows_short_client_names():
+    from rdapi.web import client_label
+
+    chrome = (
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko)"
+        " Chrome/141.0.0.0 Safari/537.36"
+    )
+    safari = (
+        "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X) AppleWebKit/605.1.15"
+        " (KHTML, like Gecko) Version/18.0 Mobile/15E148 Safari/604.1"
+    )
+    assert client_label(chrome) == "Chrome · Windows"
+    assert client_label(safari) == "Safari · iOS"
+    assert client_label("client Office-PC (windows)") == "client Office-PC (windows)"

@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.2
+
+- **No more sideways scrolling inside panels:** the sign-ins on the account page and the
+  saved backups are lists instead of tables; browsers are shown short (e.g. “Chrome ·
+  Windows”, the full text on hover). Table headings may wrap, so the device list fits
+  from about 900 px in every language.
+- The permission on a shared address book (e.g. “Full control”) now sits next to its title.
+
 ## 0.10.1
 
 - **More uniform pages:** detail pages (device, user, group, shared address book) all show
