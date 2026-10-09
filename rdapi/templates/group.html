@@ -6,6 +6,16 @@
 <p class="page-hint">{{ _('Members of a group see each other’s devices in the RustDesk app under “Accessible devices”. Admins always see all devices.') }}</p>
 <div class="panels">
   <section class="panel">
+    <h2>{{ _('Details') }}</h2>
+    <dl class="facts">
+      <dt>{{ _('Created') }}</dt><dd>{{ group.created_at | dt }}</dd>
+      <dt>{{ _('Members') }}</dt><dd>{{ members | length }}</dd>
+      <dt>{{ _('Shared address books') }}</dt>
+      <dd>{% for b in books %}<a href="/address-book?book={{ b.guid | urlencode }}">{{ b.name }}</a> <span class="hint small">· {{ _(RULES[b.rule]) }}</span>{% if not loop.last %}<br>{% endif %}{% else %}–{% endfor %}</dd>
+    </dl>
+    <div class="panel-foot"><p class="hint small">{{ _('You share an address book with this group on the page of the address book.') }}</p></div>
+  </section>
+  <section class="panel">
     <h2>{{ _('Edit') }}</h2>
     <form method="post" action="/groups/{{ group.id }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
@@ -19,16 +29,6 @@
       </fieldset>
       <button type="submit">{{ _('Save') }}</button>
     </form>
-  </section>
-  <section class="panel">
-    <h2>{{ _('Shared address books') }}</h2>
-    {% if books %}
-    <ul class="plain-list">
-      {% for b in books %}<li><a href="/address-book?book={{ b.guid | urlencode }}">{{ b.name }}</a> <span class="hint small">· {{ _(RULES[b.rule]) }}</span></li>{% endfor %}
-    </ul>
-    {% else %}
-    <p class="hint">{{ _('None. You share an address book with this group on the page of the address book.') }}</p>
-    {% endif %}
     <form method="post" action="/groups/{{ group.id }}/delete" class="panel-foot" data-confirm="{{ _('Delete the group {name}? Its members and their devices stay.', name=group.name) }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <button type="submit" class="danger-quiet">{{ _('Delete group') }}</button>

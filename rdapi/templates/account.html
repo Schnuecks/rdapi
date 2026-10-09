@@ -27,7 +27,7 @@
       <button type="submit" class="danger-quiet" formaction="/account/2fa/disable">{{ _('Turn off') }}</button>
     </form>
     {% else %}
-    <p>{{ _('Protects your account even if someone knows your password: after the password, you also enter a code from an authenticator app on your phone.') }}</p>
+    <p class="hint">{{ _('Protects your account even if someone knows your password: after the password, you also enter a code from an authenticator app on your phone.') }}</p>
     <form method="post" action="/account/2fa/start">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <button type="submit">{{ _('Set up') }}</button>
@@ -36,7 +36,7 @@
   </section>
   <section class="panel">
     <h2>{{ _('Passkeys and security keys') }}</h2>
-    <p>{{ _('Sign in without a password, with fingerprint, face or PIN on your device or with a security key. Once you have a passkey, the web interface also asks for it after the password.') }}</p>
+    <p class="hint">{{ _('Sign in without a password, with fingerprint, face or PIN on your device or with a security key. Once you have a passkey, the web interface also asks for it after the password.') }}</p>
     {% if passkeys %}
     <ul class="plain-list passkeys">
       {% for k in passkeys %}

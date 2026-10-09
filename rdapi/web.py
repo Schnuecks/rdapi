@@ -1751,11 +1751,25 @@ ACTIVITY = {
 @router.get("/activity", response_class=HTMLResponse)
 def activity_log(
     request: Request,
+    page: int = 1,
     user: sqlite3.Row = Depends(admin_user),
     conn: sqlite3.Connection = Depends(get_db),
 ) -> HTMLResponse:
-    rows = conn.execute("SELECT * FROM activity ORDER BY id DESC LIMIT 300").fetchall()
-    return render(request, "activity.html", user, rows=rows, labels=ACTIVITY)
+    total = conn.execute("SELECT COUNT(*) FROM activity").fetchone()[0]
+    page, pages, offset = _pages(total, page, LOG_PAGE_SIZE)
+    rows = conn.execute(
+        "SELECT * FROM activity ORDER BY id DESC LIMIT ? OFFSET ?", (LOG_PAGE_SIZE, offset)
+    ).fetchall()
+    return render(
+        request,
+        "activity.html",
+        user,
+        rows=rows,
+        labels=ACTIVITY,
+        page=page,
+        pages=pages,
+        total=total,
+    )
 
 
 @router.get("/logins", response_class=HTMLResponse)
