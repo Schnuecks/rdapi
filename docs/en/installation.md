@@ -31,6 +31,21 @@ The `data` folder must be writable for the user the container runs as (`PUID` an
 `PGID`, default 1000). An optional `.env` next to `compose.yaml` takes further settings,
 see [Configuration](configuration.md).
 
+## Unraid
+
+A template for the Docker page of Unraid is in [`unraid/rdapi.xml`](../../unraid/rdapi.xml).
+Until RDAPI is listed in Community Applications, add it by hand:
+
+1. On the Unraid server, save the template as
+   `/boot/config/plugins/dockerMan/templates-user/my-RDAPI.xml`, e.g. in the terminal:
+   `curl -o /boot/config/plugins/dockerMan/templates-user/my-RDAPI.xml https://raw.githubusercontent.com/Schnuecks/rdapi/main/unraid/rdapi.xml`
+2. **Docker → Add Container**, choose **RDAPI** under *Template*, check the settings and
+   click **Apply**.
+
+The container runs as `99:100` (Unraid's `nobody:users`), read-only and without extra
+rights; the data lands in `/mnt/user/appdata/rdapi`. The setup code for the first admin
+account is in the container log (Docker → RDAPI → Logs).
+
 ## First admin account
 
 As long as there is no user, every page leads to **Create admin account**. The setup

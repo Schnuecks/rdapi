@@ -31,6 +31,21 @@ Der Ordner `data` muss für den Benutzer beschreibbar sein, unter dem der Contai
 (`PUID` und `PGID`, Standard 1000). Weitere Einstellungen kommen in eine optionale `.env`
 neben `compose.yaml`, siehe [Konfiguration](configuration.md).
 
+## Unraid
+
+Eine Vorlage für die Docker-Seite von Unraid liegt in [`unraid/rdapi.xml`](../../unraid/rdapi.xml).
+Bis RDAPI in den Community Applications steht, fügst du sie von Hand hinzu:
+
+1. Auf dem Unraid-Server die Vorlage als
+   `/boot/config/plugins/dockerMan/templates-user/my-RDAPI.xml` speichern, z. B. im Terminal:
+   `curl -o /boot/config/plugins/dockerMan/templates-user/my-RDAPI.xml https://raw.githubusercontent.com/Schnuecks/rdapi/main/unraid/rdapi.xml`
+2. **Docker → Add Container**, unter *Template* **RDAPI** wählen, Einstellungen prüfen und
+   **Apply** klicken.
+
+Der Container läuft als `99:100` (`nobody:users` von Unraid), schreibgeschützt und ohne
+zusätzliche Rechte; die Daten liegen in `/mnt/user/appdata/rdapi`. Den Einrichtungscode
+für das erste Admin-Konto findest du im Container-Log (Docker → RDAPI → Logs).
+
 ## Erstes Admin-Konto
 
 Solange es keinen Benutzer gibt, führt jede Seite zu **Admin-Konto anlegen**. Der

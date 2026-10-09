@@ -1,5 +1,9 @@
 # Changelog
 
+## Unreleased
+
+- **Unraid template** in `unraid/rdapi.xml`, described in the installation guide.
+
 ## 0.9.0
 
 - **First public release (beta).** RDAPI is now open source on GitHub. Signed-in apps

@@ -1,0 +1,31 @@
+<?xml version="1.0"?>
+<Container version="2">
+  <Name>RDAPI</Name>
+  <Repository>ghcr.io/schnuecks/rdapi:latest</Repository>
+  <Registry>https://github.com/Schnuecks/rdapi/pkgs/container/rdapi</Registry>
+  <Network>bridge</Network>
+  <Privileged>false</Privileged>
+  <Support>https://github.com/Schnuecks/rdapi/issues</Support>
+  <Project>https://rdapi.app</Project>
+  <ReadMe>https://github.com/Schnuecks/rdapi#readme</ReadMe>
+  <Overview>Lean self-hosted API server for the RustDesk app. Adds sign-in in the app, a personal address book that syncs to every device, a device list and a history of incoming connections to your own RustDesk ID and relay server, plus a web interface in six languages. Two-factor sign-in, passkeys, single sign-on (OpenID Connect) and daily backups. One container, one SQLite file.&#xD;
+&#xD;
+On the first visit of the web interface you create the admin account; the setup code it asks for is printed to the container log. Then enter http://[server]:21114 (or your HTTPS address) as API server in the RustDesk app.&#xD;
+&#xD;
+Public beta: the official RustDesk ID server up to 1.1.16 cannot connect a signed-in app yet. Until RustDesk releases the fix, sign out in the app before connecting.</Overview>
+  <Category>Network:Management Tools:Utilities</Category>
+  <WebUI>http://[IP]:[PORT:21114]/</WebUI>
+  <TemplateURL>https://raw.githubusercontent.com/Schnuecks/rdapi/main/unraid/rdapi.xml</TemplateURL>
+  <Icon>https://raw.githubusercontent.com/Schnuecks/rdapi/main/rdapi/static/icons/apple-touch-icon.png</Icon>
+  <ExtraParams>--user 99:100 --read-only --tmpfs /tmp --cap-drop ALL --security-opt no-new-privileges:true</ExtraParams>
+  <PostArgs/>
+  <Requires>Your own RustDesk ID and relay server (hbbs/hbbr). For use over the internet, put RDAPI behind a reverse proxy with HTTPS.</Requires>
+  <Config Name="Web interface and API" Target="21114" Default="21114" Mode="tcp" Description="Port for the web interface and the API of the RustDesk app." Type="Port" Display="always" Required="true" Mask="false">21114</Config>
+  <Config Name="Data" Target="/data" Default="/mnt/user/appdata/rdapi" Mode="rw" Description="Database and daily backups. Must be writable for the user the container runs as (99:100, see Extra Parameters)." Type="Path" Display="always" Required="true" Mask="false">/mnt/user/appdata/rdapi</Config>
+  <Config Name="Default language" Target="RDAPI_DEFAULT_LANGUAGE" Default="" Mode="" Description="de, en, fr, es, it or nl. Empty: the browser language decides." Type="Variable" Display="always" Required="false" Mask="false"/>
+  <Config Name="Secret key" Target="RDAPI_SECRET_KEY" Default="" Mode="" Description="Optional long random value (e.g. openssl rand -base64 48). Stores the two-factor keys encrypted. Keep it; without it, two-factor sign-in has to be set up again." Type="Variable" Display="always" Required="false" Mask="true"/>
+  <Config Name="Default theme" Target="RDAPI_DEFAULT_THEME" Default="system" Mode="" Description="system, light or dark." Type="Variable" Display="advanced" Required="false" Mask="false">system</Config>
+  <Config Name="Daily backups to keep" Target="RDAPI_BACKUP_KEEP" Default="7" Mode="" Description="Number of daily backups in /data/backups. 0 turns daily backups off." Type="Variable" Display="advanced" Required="false" Mask="false">7</Config>
+  <Config Name="History days" Target="RDAPI_HISTORY_DAYS" Default="365" Mode="" Description="History and sign-in log are deleted after this many days." Type="Variable" Display="advanced" Required="false" Mask="false">365</Config>
+  <Config Name="Trusted reverse proxies" Target="FORWARDED_ALLOW_IPS" Default="127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7" Mode="" Description="Addresses of reverse proxies whose X-Forwarded-For is trusted. Never use *." Type="Variable" Display="advanced" Required="false" Mask="false">127.0.0.1,::1,10.0.0.0/8,172.16.0.0/12,192.168.0.0/16,fc00::/7</Config>
+</Container>
