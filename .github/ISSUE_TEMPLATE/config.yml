@@ -1,8 +1,11 @@
 blank_issues_enabled: false
 contact_links:
+  - name: Questions and ideas
+    url: https://github.com/Schnuecks/rdapi/discussions
+    about: Ask questions, share ideas or show your setup in the discussions.
   - name: Documentation
     url: https://github.com/schnuecks/rdapi/tree/main/docs/en
     about: Installation, settings, single sign-on and troubleshooting are described in the documentation.
   - name: Security problem
-    url: https://github.com/schnuecks/rdapi/blob/main/SECURITY.md
-    about: Please report vulnerabilities privately, not as a public issue. How to do that is described here.
+    url: https://github.com/Schnuecks/rdapi/security/advisories/new
+    about: Please report vulnerabilities privately here, not as a public issue.
