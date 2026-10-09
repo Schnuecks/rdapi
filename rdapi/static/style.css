@@ -249,3 +249,11 @@ ul.rule-list li form { margin: 0; }
 fieldset.member-choice { border: 0; padding: 0; margin: 0; display: grid; gap: .35rem; }
 fieldset.member-choice legend { font-weight: 500; margin-bottom: .3rem; padding: 0; }
 .panel select { width: 100%; }
+.foot-actions { display: flex; flex-wrap: wrap; gap: .5rem 1.5rem; }
+.foot-actions form { margin: 0; }
+/* Einleitung direkt unter der Panel-Überschrift, Knöpfe nebeneinander */
+.panel > h2 + .hint { margin-bottom: 1rem; }
+.form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; }
+ul.rule-list { list-style: none; padding: 0; margin: 0; }
+.book-rule { margin: -.75rem 0 1.25rem; }
+.book-rule .badge { background: var(--surface); border: 1px solid var(--line); }

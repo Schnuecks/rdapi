@@ -2,8 +2,22 @@
 {% block title %}{{ target.username }}{% endblock %}
 {% block main %}
 <a class="back" href="/users">{{ _('Users') }}</a>
-<h1>{{ target.username }}</h1>
+<h1>{{ target.display_name or target.username }}<code>{{ target.username }}</code></h1>
 <div class="panels">
+  <section class="panel">
+    <h2>{{ _('Details') }}</h2>
+    <dl class="facts">
+      <dt>{{ _('Role') }}</dt><dd>{% if target.is_admin %}{{ _('Admin') }}{% else %}{{ _('User') }}{% endif %}</dd>
+      <dt>{{ _('Status') }}</dt><dd>{% if target.enabled %}{{ _('active') }}{% else %}<strong class="bad">{{ _('disabled') }}</strong>{% endif %}</dd>
+      <dt>{{ _('Created') }}</dt><dd>{{ target.created_at | dt }}</dd>
+      <dt>{{ _('Last login') }}</dt><dd>{{ target.last_login_at | dt }}</dd>
+      <dt>{{ _('Two-factor sign-in') }}</dt><dd>{% if target.totp_enabled %}{{ _('on') }}{% else %}{{ _('off') }}{% endif %}</dd>
+      <dt>{{ _('Passkeys') }}</dt><dd>{{ passkey_count }}</dd>
+      {% if sso_name %}<dt>{{ _('Single sign-on') }}</dt><dd>{% if target.oidc_sub %}{{ _('linked') }}{% else %}{{ _('not linked') }}{% endif %}</dd>{% endif %}
+      <dt>{{ _('Groups') }}</dt><dd>{% for g in groups %}<a href="/groups/{{ g.id }}">{{ g.name }}</a>{% if not loop.last %}, {% endif %}{% else %}–{% endfor %}</dd>
+      <dt>{{ _('Devices') }}</dt><dd>{% for d in devices %}<a href="/devices/{{ d.id | urlencode }}"><code>{{ d.id }}</code></a> {{ d.hostname }}{% if not loop.last %}<br>{% endif %}{% else %}–{% endfor %}</dd>
+    </dl>
+  </section>
   <section class="panel">
     <h2>{{ _('Edit') }}</h2>
     <form method="post" action="/users/{{ target.id }}">
@@ -11,38 +25,28 @@
       <label>{{ _('Display name') }} <input name="display_name" value="{{ target.display_name }}" maxlength="100"></label>
       <label>{{ _('Email') }} <input name="email" type="email" value="{{ target.email }}" maxlength="200"></label>
       <label>{{ _('Note') }} <input name="note" value="{{ target.note }}" maxlength="500"></label>
-      <label class="check"><input type="checkbox" name="is_admin" value="1"{% if target.is_admin %} checked{% endif %}> {{ _('Admin') }}</label>
-      <label class="check"><input type="checkbox" name="enabled" value="1"{% if target.enabled %} checked{% endif %}> {{ _('Active (may sign in)') }}</label>
       <label>{{ _('New password') }} <span class="hint small">{{ _('(leave empty to keep)') }}</span>
         <input name="password" type="password" minlength="10" autocomplete="new-password"></label>
+      <label class="check"><input type="checkbox" name="is_admin" value="1"{% if target.is_admin %} checked{% endif %}> {{ _('Admin') }}</label>
+      <label class="check"><input type="checkbox" name="enabled" value="1"{% if target.enabled %} checked{% endif %}> {{ _('Active (may sign in)') }}</label>
       <button type="submit">{{ _('Save') }}</button>
       <p class="hint small">{{ _('A new password or disabling the user ends all of their sessions.') }}</p>
     </form>
-  </section>
-  <section class="panel">
-    <h2>{{ _('Devices') }}</h2>
-    {% if devices %}
-    <ul class="plain-list">{% for d in devices %}<li><a href="/devices/{{ d.id | urlencode }}"><code>{{ d.id }}</code></a> {{ d.hostname }}</li>{% endfor %}</ul>
-    {% else %}<p class="hint">{{ _('None.') }}</p>{% endif %}
-    <dl class="facts">
-      <dt>{{ _('Created') }}</dt><dd>{{ target.created_at | dt }}</dd>
-      <dt>{{ _('Last login') }}</dt><dd>{{ target.last_login_at | dt }}</dd>
-      <dt>{{ _('Two-factor sign-in') }}</dt><dd>{% if target.totp_enabled %}{{ _('on') }}{% else %}{{ _('off') }}{% endif %}</dd>
-      <dt>{{ _('Passkeys') }}</dt><dd>{{ passkey_count }}</dd>
-      <dt>{{ _('Groups') }}</dt><dd>{% for g in groups %}<a href="/groups/{{ g.id }}">{{ g.name }}</a>{% if not loop.last %}, {% endif %}{% else %}–{% endfor %}</dd>
-      {% if sso_name %}<dt>{{ _('Single sign-on') }}</dt><dd>{% if target.oidc_sub %}{{ _('linked') }}{% else %}{{ _('not linked') }}{% endif %}</dd>{% endif %}
-    </dl>
-    {% if target.totp_enabled or passkey_count %}
-    <form method="post" action="/users/{{ target.id }}/2fa/reset" data-confirm="{{ _('Turn off two-factor sign-in for {name} and remove their passkeys? Do this only if they lost their phone, passkeys and recovery codes.', name=target.username) }}">
-      <input type="hidden" name="csrf" value="{{ csrf }}">
-      <button type="submit" class="quiet">{{ _('Turn off two-factor sign-in') }}</button>
-    </form>
-    {% endif %}
-    {% if target.id != user.id %}
-    <form method="post" action="/users/{{ target.id }}/delete" class="panel-foot" data-confirm="{{ _('Delete user {name} and their address book for good?', name=target.username) }}">
-      <input type="hidden" name="csrf" value="{{ csrf }}">
-      <button type="submit" class="danger-quiet">{{ _('Delete user') }}</button>
-    </form>
+    {% if target.totp_enabled or passkey_count or target.id != user.id %}
+    <div class="panel-foot foot-actions">
+      {% if target.totp_enabled or passkey_count %}
+      <form method="post" action="/users/{{ target.id }}/2fa/reset" data-confirm="{{ _('Turn off two-factor sign-in for {name} and remove their passkeys? Do this only if they lost their phone, passkeys and recovery codes.', name=target.username) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="danger-quiet">{{ _('Turn off two-factor sign-in') }}</button>
+      </form>
+      {% endif %}
+      {% if target.id != user.id %}
+      <form method="post" action="/users/{{ target.id }}/delete" data-confirm="{{ _('Delete user {name} and their address book for good?', name=target.username) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <button type="submit" class="danger-quiet">{{ _('Delete user') }}</button>
+      </form>
+      {% endif %}
+    </div>
     {% endif %}
   </section>
 </div>

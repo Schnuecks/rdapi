@@ -2,7 +2,7 @@
 {% block title %}{{ _('Activity') }}{% endblock %}
 {% block main %}
 <h1>{{ _('Activity') }}</h1>
-<p class="page-hint">{{ _('Security-relevant changes: who changed users, devices, backups or their own sign-in, and when. The last 300 entries.') }}</p>
+<p class="page-hint">{{ _('Security-relevant changes: who changed users, groups, devices, shared address books, backups or their own sign-in, and when.') }}</p>
 {% if rows %}
 <div class="table-wrap">
 <table>
@@ -21,6 +21,7 @@
   </tbody>
 </table>
 </div>
+{% include "_pager.html" %}
 {% else %}
 <p class="empty">{{ _('Nothing recorded yet.') }}</p>
 {% endif %}

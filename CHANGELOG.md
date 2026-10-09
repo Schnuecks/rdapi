@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+- **More uniform pages:** detail pages (device, user, group, shared address book) all show
+  details on the left and the edit form on the right, with remove and delete actions at the
+  bottom of the edit form. Panel introductions use the same muted style, “Cancel” sits next
+  to “Save”, the users page has an introduction, and the activity log is paged like the
+  logins (20 per page) instead of showing only the last 300 entries.
+
 ## 0.10.0
 
 - **Shared address books:** admins create address books such as “Family” or “Office” and

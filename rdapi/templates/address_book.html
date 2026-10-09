@@ -19,9 +19,9 @@
   {% else %}
   {{ _('A shared address book. Everyone it is shared with sees it in the RustDesk app.') }}
   {% if book.note %}<br>{{ book.note }}{% endif %}
-  <br><span class="badge">{{ _(RULES[book.rule]) }}</span>
   {% endif %}
 </p>
+{% if not book.personal %}<p class="book-rule"><span class="badge">{{ _(RULES[book.rule]) }}</span></p>{% endif %}
 {% if peers %}
 <div class="table-wrap">
 <table>
@@ -74,8 +74,10 @@
         {% endfor %}
       </fieldset>
       {% endif %}
-      <button type="submit">{{ _('Save') }}</button>
-      {% if edit %}<a class="button quiet" href="/address-book{{ q }}">{{ _('Cancel') }}</a>{% endif %}
+      <div class="form-actions">
+        <button type="submit">{{ _('Save') }}</button>
+        {% if edit %}<a class="button quiet" href="/address-book{{ q }}">{{ _('Cancel') }}</a>{% endif %}
+      </div>
     </form>
   </section>
   <section class="panel">
@@ -108,11 +110,8 @@
       <button type="submit">{{ _('Add') }}</button>
     </form>
   </section>
-</div>
-{% endif %}
-
-{% if user.is_admin and book.personal %}
-<section class="panel panel-narrow">
+  {% if user.is_admin and book.personal %}
+  <section class="panel">
   <h2>{{ _('New shared address book') }}</h2>
   <p class="hint">{{ _('For devices several people look after, e.g. the computers of the family. You decide who may see or change it.') }}</p>
   <form method="post" action="/address-book/shared/new">
@@ -121,7 +120,9 @@
     <label>{{ _('Note') }} <input name="note" maxlength="500"></label>
     <button type="submit">{{ _('Create address book') }}</button>
   </form>
-</section>
+  </section>
+  {% endif %}
+</div>
 {% endif %}
 
 {% if user.is_admin and not book.personal %}
@@ -161,7 +162,7 @@
     </form>
   </section>
   <section class="panel">
-    <h2>{{ _('Settings') }}</h2>
+    <h2>{{ _('Edit') }}</h2>
     <form method="post" action="/address-book/shared/{{ book.guid | urlencode }}">
       <input type="hidden" name="csrf" value="{{ csrf }}">
       <label>{{ _('Name') }} <input name="name" value="{{ book.name }}" maxlength="100" required></label>
