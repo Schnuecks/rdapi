@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.2
 
 - **No more sideways scrolling inside panels:** the sign-ins on the account page and the
   saved backups are lists instead of tables; browsers are shown short (e.g. “Chrome ·
