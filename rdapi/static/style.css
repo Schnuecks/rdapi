@@ -257,8 +257,6 @@ fieldset.member-choice legend { font-weight: 500; margin-bottom: .3rem; padding:
 .panel > h2 + .hint { margin-bottom: 1rem; }
 .form-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem 1.25rem; }
 ul.rule-list { list-style: none; padding: 0; margin: 0; }
-.book-rule { margin: -.75rem 0 1.25rem; }
-.book-rule .badge { background: var(--surface); border: 1px solid var(--line); }
 .row-actions { display: flex; flex-wrap: wrap; align-items: center; gap: .25rem 1rem; flex: none; }
 .row-actions form { margin: 0; }
 ul.item-list li:last-child { border-bottom: 0; }

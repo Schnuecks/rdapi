@@ -3,7 +3,7 @@
 {% block main %}
 {% set q = '' if book.personal else '?book=' ~ (book.guid | urlencode) %}
 {% set amp = '&' if q else '?' %}
-<h1>{% if book.personal %}{{ _('My address book') }}{% else %}{{ book.name }}{% endif %}</h1>
+<h1>{% if book.personal %}{{ _('My address book') }}{% else %}{{ book.name }}<code>{{ _(RULES[book.rule]) }}</code>{% endif %}</h1>
 {% if books | length > 1 %}
 <nav class="tabs" aria-label="{{ _('Address books') }}">
   {% for b in books %}
@@ -21,7 +21,6 @@
   {% if book.note %}<br>{{ book.note }}{% endif %}
   {% endif %}
 </p>
-{% if not book.personal %}<p class="book-rule"><span class="badge">{{ _(RULES[book.rule]) }}</span></p>{% endif %}
 {% if peers %}
 <div class="table-wrap">
 <table>
