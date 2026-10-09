@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Sign in to the RustDesk app') }}{% endblock %}
+{% block flashes %}{% endblock %}
+{% block main %}
+<div class="login-page">
+  <div class="login-form">
+    <img src="/static/logo.svg" alt="" width="56" height="56">
+    <h1>{{ _('Sign in to the RustDesk app') }}</h1>
+    {% if done %}
+      {% if allowed %}
+      <p>{{ _('Done. The RustDesk app is signing you in; you can close this window.') }}</p>
+      {% else %}
+      <p>{{ _('Cancelled. The RustDesk app was not signed in.') }}</p>
+      {% endif %}
+    {% else %}
+    <p>{{ _('Sign in the RustDesk app as {name} on this device?', name=account.username) }}</p>
+    <dl class="facts">
+      <dt>{{ _('Device') }}</dt><dd>{{ flow.client_info or "–" }}</dd>
+      <dt>{{ _('ID') }}</dt><dd><code>{{ flow.device_id or "–" }}</code></dd>
+    </dl>
+    <p class="hint small">{{ _('Only confirm if you started the sign-in in the app yourself just now.') }}</p>
+    <form method="post" action="/oidc/confirm" class="login-form-actions">
+      <input type="hidden" name="confirm" value="{{ confirm }}">
+      <button type="submit" name="action" value="allow">{{ _('Sign in') }}</button>
+      <button type="submit" name="action" value="cancel" class="quiet">{{ _('Cancel') }}</button>
+    </form>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

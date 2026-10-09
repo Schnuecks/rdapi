@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Backups') }}{% endblock %}
+{% block main %}
+<h1>{{ _('Backups') }}</h1>
+<p class="page-hint">
+  {% if keep > 0 %}{{ _('A backup of the database is made every day; the last {count} are kept.', count=keep) }}{% else %}{{ _('Daily backups are turned off.') }}{% endif %}
+  {{ _('Folder:') }} <code>{{ folder }}</code>
+</p>
+<div class="panels">
+  <section class="panel">
+    <h2>{{ _('Saved backups') }}</h2>
+    {% if backups %}
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>{{ _('Created') }}</th><th>{{ _('Size') }}</th><th></th></tr></thead>
+      <tbody>
+      {% for b in backups %}
+        <tr>
+          <td>{{ b.created_at | dt }}<br><span class="hint small">{{ b.name }}</span></td>
+          <td>{{ (b.size / 1024) | round(0) | int }} KB</td>
+          <td class="actions">
+            <a class="button quiet" href="/backups/{{ b.name }}">{{ _('Download') }}</a>
+            <form method="post" action="/backups/{{ b.name }}/restore" data-confirm="{{ _('Restore this backup? All changes since then are lost. The current state is backed up first.') }}">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button type="submit" class="danger-quiet">{{ _('Restore') }}</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+    {% else %}<p class="empty">{{ _('No backups yet.') }}</p>{% endif %}
+    <form method="post" action="/backups/new" class="panel-foot">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit">{{ _('Back up now') }}</button>
+    </form>
+  </section>
+  <section class="panel">
+    <h2>{{ _('Upload a backup') }}</h2>
+    <form method="post" action="/backups/upload" enctype="multipart/form-data">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('Backup file') }} <input type="file" name="file" accept=".sqlite3" required></label>
+      <button type="submit">{{ _('Upload') }}</button>
+      <p class="hint small">{{ _('For example a downloaded backup after moving to a new server. It then appears in the list and can be restored.') }}</p>
+    </form>
+  </section>
+</div>
+{% endblock %}

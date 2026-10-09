@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Activity') }}{% endblock %}
+{% block main %}
+<h1>{{ _('Activity') }}</h1>
+<p class="page-hint">{{ _('Security-relevant changes: who changed users, devices, backups or their own sign-in, and when. The last 300 entries.') }}</p>
+{% if rows %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>{{ _('Time') }}</th><th>{{ _('Who') }}</th><th>{{ _('What') }}</th><th>{{ _('Concerns') }}</th><th>{{ _('Details') }}</th><th>{{ _('IP') }}</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.created_at | dt }}</td>
+      <td>{{ r.actor or "–" }}</td>
+      <td>{{ _(labels[r.action]) if r.action in labels else r.action }}</td>
+      <td>{% if r.target %}<code>{{ r.target }}</code>{% else %}–{% endif %}</td>
+      <td class="small">{{ r.detail or "–" }}</td>
+      <td class="small">{{ r.ip or "–" }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">{{ _('Nothing recorded yet.') }}</p>
+{% endif %}
+{% endblock %}

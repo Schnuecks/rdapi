@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Devices') }}{% endblock %}
+{% block main %}
+<h1>{{ _('Devices') }}</h1>
+<p class="page-hint">
+  {% if user.is_admin %}{{ _('All devices that have reported to this server.') }}{% else %}{{ _('Devices on which you are signed in to the RustDesk app.') }}{% endif %}
+  {{ _('A device belongs to the user who last signed in to the app on it.') }}
+</p>
+{% if devices %}
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th></th><th>{{ _('ID') }}</th><th>{{ _('Name') }}</th><th>{{ _('Operating system') }}</th><th>{{ _('System user') }}</th>
+    <th>{{ _('Version') }}</th>{% if user.is_admin %}<th>{{ _('Owner') }}</th>{% endif %}<th>{{ _('Last seen') }}</th><th>{{ _('Note') }}</th>
+  </tr></thead>
+  <tbody>
+  {% for d in devices %}
+    <tr>
+      <td>{% if d.last_seen_at and d.last_seen_at >= online_after %}<span class="dot on" title="{{ _('online') }}"></span>{% else %}<span class="dot" title="{{ _('offline') }}"></span>{% endif %}</td>
+      <td><a href="/devices/{{ d.id | urlencode }}"><code>{{ d.id }}</code></a></td>
+      <td>{{ d.hostname or "–" }}</td>
+      <td>{{ d.os or "–" }}</td>
+      <td>{{ d.username or "–" }}</td>
+      <td>{{ d.version or "–" }}</td>
+      {% if user.is_admin %}<td>{{ d.owner or "–" }}</td>{% endif %}
+      <td>{{ d.last_seen_at | dt }}</td>
+      <td>{{ d.note }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">{{ _('No devices yet. As soon as this server is set as API server in the RustDesk app, the device shows up here.') }}</p>
+{% endif %}
+{% endblock %}

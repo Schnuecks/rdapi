@@ -1,0 +1,237 @@
+/* RDAPI: Barlow, Kopfzeile mit Symbolknöpfen, Hell/Dunkel/System,
+   Akzentfarbe aus dem Logo. */
+/* Schriften liegen lokal (SIL Open Font License, fonts/OFL.txt): keine Anfragen an Google */
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/barlow-latin-ext-400.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 400; font-display: swap;
+  src: url("fonts/barlow-latin-400.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 500; font-display: swap;
+  src: url("fonts/barlow-latin-ext-500.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 500; font-display: swap;
+  src: url("fonts/barlow-latin-500.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("fonts/barlow-latin-ext-600.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Barlow"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("fonts/barlow-latin-600.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+@font-face { font-family: "Barlow Semi Condensed"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("fonts/barlow-semi-condensed-latin-ext-600.woff2") format("woff2"); unicode-range: U+0100-02BA, U+02BD-02C5, U+02C7-02CC, U+02CE-02D7, U+02DD-02FF, U+0304, U+0308, U+0329, U+1D00-1DBF, U+1E00-1E9F, U+1EF2-1EFF, U+2020, U+20A0-20AB, U+20AD-20C0, U+2113, U+2C60-2C7F, U+A720-A7FF; }
+@font-face { font-family: "Barlow Semi Condensed"; font-style: normal; font-weight: 600; font-display: swap;
+  src: url("fonts/barlow-semi-condensed-latin-600.woff2") format("woff2"); unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC, U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215, U+FEFF, U+FFFD; }
+
+:root {
+  --radius: 6px;
+  --page: 72rem;
+  --h-panel: 600 1.2rem/1.2 var(--font-cond);
+  --bg: #ECEEF0;
+  --surface: #FFFFFF;
+  --ink: #17212B;
+  --muted: #5A6774;
+  --line: #D2D8DE;
+  --accent: #0B5FB0;
+  --accent-ink: #FFFFFF;
+  --ok: #1A7F4B;
+  --warn: #A3480F;
+  --font: "Barlow", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-cond: "Barlow Semi Condensed", "Barlow", system-ui, sans-serif;
+  color-scheme: light dark;
+}
+/* Dunkel: nach Systemeinstellung, außer „Hell“ ist gewählt, oder ausdrücklich „Dunkel“ */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #14181C;
+    --surface: #1D2227;
+    --ink: #E5E9ED;
+    --muted: #97A3AE;
+    --line: #2E353C;
+    --accent: #5AA6F0;
+    --accent-ink: #0A1A2B;
+    --ok: #4CC27F;
+    --warn: #EF8B5B;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #14181C;
+  --surface: #1D2227;
+  --ink: #E5E9ED;
+  --muted: #97A3AE;
+  --line: #2E353C;
+  --accent: #5AA6F0;
+  --accent-ink: #0A1A2B;
+  --ok: #4CC27F;
+  --warn: #EF8B5B;
+  color-scheme: dark;
+}
+:root[data-theme="light"] { color-scheme: light; }
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--bg); color: var(--ink);
+  padding-inline: env(safe-area-inset-left) env(safe-area-inset-right);
+  font: 400 16px/1.5 var(--font); font-variant-numeric: tabular-nums;
+}
+a { color: var(--accent); }
+code { font-size: .9em; }
+[hidden] { display: none !important; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+h1 { font: 600 2rem/1.1 var(--font-cond); margin: .25rem 0 1rem; }
+h1 code { font: 500 1.1rem/1 var(--font); color: var(--muted); margin-left: .4rem; }
+h2 { font: var(--h-panel); margin: 0 0 .8rem; }
+.hint { color: var(--muted); }
+.small { font-size: .85rem; }
+
+/* Kopfzeile */
+.topbar {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem;
+  padding: .75rem clamp(1rem, 3vw, 2rem);
+  background: var(--surface); border-bottom: 1px solid var(--line);
+}
+@supports (padding: max(0px)) { .topbar { padding-top: max(.75rem, calc(env(safe-area-inset-top) + .5rem)); } }
+.brand img { display: block; border-radius: 6px; }
+.brand {
+  font: 600 1.25rem/1 var(--font-cond); color: var(--ink); text-decoration: none; letter-spacing: .01em; white-space: nowrap;
+  display: inline-flex; align-items: center; gap: .5rem;
+}
+.tb-left { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem 1.5rem; flex: 1; min-width: fit-content; }
+.tb-right { margin-left: auto; display: flex; align-items: center; gap: 1.25rem; }
+.nav-link { color: var(--muted); text-decoration: none; white-space: nowrap; }
+.nav-link:hover { color: var(--ink); }
+.nav-link.active { color: var(--ink); font-weight: 600; box-shadow: inset 0 -2px var(--accent); }
+.topbar > .menu-toggle { display: none; }
+@media (max-width: 1080px) {
+  .tb-right { flex-basis: 100%; flex-wrap: wrap; justify-content: flex-end; gap: .35rem 1rem; }
+  .js .topbar { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: .6rem .75rem;
+    padding-block: max(.6rem, calc(env(safe-area-inset-top) + .4rem)) .6rem; position: static; }
+  .js .topbar > .tb-left { grid-column: 1; grid-row: 1; min-width: 0; }
+  .js .topbar > .menu-toggle { display: inline-flex; grid-column: 2; grid-row: 1; align-self: center; }
+  .js .topbar > .tb-right { display: none; grid-column: 1 / -1; }
+  .js .topbar.menu-open > .tb-right { display: flex; flex-direction: column; align-items: stretch; gap: 0; margin-left: 0; }
+  .js .topbar.menu-open > .tb-right > a { padding: .7rem .25rem; border-top: 1px solid var(--line); text-align: left; box-shadow: none; }
+  .js .topbar.menu-open > .tb-right > .tb-prefs { padding: .5rem 0 0; border-top: 1px solid var(--line); justify-content: flex-start; }
+}
+
+/* Sprache, Design, Konto und Abmelden als Symbolknöpfe */
+.tb-prefs { display: flex; align-items: center; gap: .15rem; margin: 0; }
+.icon-btn { display: inline-flex; align-items: center; gap: .25rem; background: none; color: var(--muted);
+  border: 0; border-radius: 6px; padding: .3rem .35rem; cursor: pointer; font: 500 .8rem/1 var(--font); list-style: none; }
+.icon-btn::-webkit-details-marker { display: none; }
+.icon-btn:hover, .lang-menu[open] > .icon-btn { color: var(--ink); background: var(--bg); }
+.icon-btn svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round; }
+a.icon-btn { text-decoration: none; }
+.lang-code { letter-spacing: .03em; }
+.lang-menu { position: relative; border: 0; padding: 0; margin: 0; }
+.lang-menu .menu { position: absolute; right: 0; top: calc(100% + .35rem); z-index: 20; min-width: 10.5rem;
+  background: var(--surface); border: 1px solid var(--line); border-radius: 6px; padding: .3rem;
+  box-shadow: 0 6px 20px rgb(0 0 0 / .18); display: grid; }
+.lang-menu .menu button { background: none; color: var(--ink); text-align: left; padding: .4rem .6rem; border-radius: 4px; font-weight: 400; }
+.lang-menu .menu button:hover { background: var(--bg); }
+.lang-menu .menu button[aria-checked="true"] { font-weight: 600; color: var(--accent); }
+.lang-menu .menu button:first-child { border-bottom: 1px solid var(--line); border-radius: 4px 4px 0 0; margin-bottom: .2rem; }
+
+/* Grundelemente */
+input, select, textarea, button, .button { font: inherit; color: inherit; border-radius: var(--radius); }
+input, select, textarea { background: var(--bg); border: 1px solid var(--line); padding: .45rem .6rem; min-width: 0; }
+button, .button {
+  display: inline-block; cursor: pointer; text-decoration: none; white-space: nowrap;
+  background: var(--accent); color: var(--accent-ink); border: 0; padding: .5rem .9rem; font-weight: 600;
+}
+button.quiet { background: none; color: var(--muted); padding: .25rem 0; font-weight: 500; text-decoration: underline; }
+button.danger-quiet { background: none; color: var(--warn); padding: .25rem 0; font-weight: 500; text-decoration: underline; }
+button.danger-quiet:hover { color: var(--ink); }
+
+main { padding: clamp(1rem, 3vw, 2rem); max-width: var(--page); margin: 0 auto; }
+.page-hint { margin: -.5rem 0 1.25rem; color: var(--muted); max-width: 46rem; }
+.back { display: inline-block; margin-bottom: .5rem; color: var(--muted); text-decoration: none; }
+.back::before { content: "‹ "; }
+.back:hover { color: var(--accent); }
+
+.flash { background: var(--surface); border-left: 4px solid var(--accent); padding: .6rem .9rem; margin: 0 0 1.25rem; font-weight: 500; }
+.flash-warn { border-left-color: var(--warn); }
+
+/* Kästen und Formulare */
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); padding: 1.3rem 1.4rem; margin-bottom: 1.25rem; }
+.panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: 1.25rem; align-items: start; margin-bottom: 1.25rem; }
+.panels > .panel { margin: 0; }
+.panel form { display: grid; gap: 1rem; }
+.panel label { display: grid; gap: .3rem; font-weight: 500; }
+.panel label.check { display: flex; align-items: center; gap: .5rem; width: fit-content; font-weight: 400; }
+.panel label.check input { width: auto; accent-color: var(--accent); }
+.panel form > button { justify-self: start; }
+.panel .hint { margin: 0; }
+.panel-foot { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--line); }
+.panel-narrow { max-width: 30rem; }
+.facts { display: grid; grid-template-columns: max-content 1fr; gap: .35rem 1.2rem; margin: 0; }
+.facts dt { color: var(--muted); }
+.facts dd { margin: 0; overflow-wrap: anywhere; }
+.plain-list { margin: 0 0 1rem; padding-left: 1.1rem; }
+details.panel summary { cursor: pointer; font: var(--h-panel); }
+pre { overflow-x: auto; font-size: .85rem; margin: 1rem 0 0; }
+
+/* Tabellen */
+.table-wrap { overflow-x: auto; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); margin-bottom: 1.25rem; }
+table { width: 100%; border-collapse: collapse; }
+th, td { text-align: left; padding: .55rem .8rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+th { font: 600 .78rem/1.2 var(--font); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; white-space: nowrap; }
+tr:last-child td { border-bottom: 0; }
+tr.dim td { color: var(--muted); }
+td form { margin: 0; }
+.empty { background: var(--surface); border: 1px dashed var(--line); border-radius: var(--radius); padding: 1.5rem; color: var(--muted); }
+
+.dot { display: inline-block; width: .6rem; height: .6rem; border-radius: 50%; background: var(--line); vertical-align: middle; }
+.dot.on { background: var(--ok); box-shadow: 0 0 0 3px color-mix(in srgb, var(--ok) 25%, transparent); }
+.badge { display: inline-block; font-size: .75rem; font-weight: 600; padding: .05rem .45rem; border-radius: 3px; background: var(--bg); color: var(--accent); }
+.good { color: var(--ok); }
+.bad { color: var(--warn); }
+.tag {
+  display: inline-block; padding: 0 .5rem; border-radius: 999px; font-size: .82rem; margin: 0 .2rem .2rem 0;
+  border: 1px solid var(--tag); background: color-mix(in srgb, var(--tag) 18%, transparent);
+}
+.pager { display: flex; flex-wrap: wrap; gap: 1rem; align-items: center; color: var(--muted); }
+
+/* Anmeldung */
+.login-page { display: grid; place-items: center; min-height: 70vh; }
+.login-form { width: min(22rem, 100%); background: var(--surface); border: 1px solid var(--line); border-radius: 6px;
+  padding: 1.5rem 1.4rem; display: grid; gap: .9rem; }
+.login-form img { border-radius: 12px; }
+.login-form h1 { font: 600 1.6rem/1.1 var(--font-cond); margin: 0 0 .2rem; }
+.login-form label { display: grid; gap: .3rem; font-weight: 500; }
+.login-form .flash { margin: 0; }
+.login-form button { justify-self: stretch; }
+
+.site-footer { max-width: var(--page); margin: 0 auto; padding: 1.5rem clamp(1rem, 3vw, 2rem) 2rem; color: var(--muted); font-size: .85rem; border-top: 1px solid var(--line); }
+.site-footer a { color: var(--muted); }
+.setup-form { width: min(26rem, 100%); }
+
+/* Links im Knopf-Stil, Aktionen in Tabellenzeilen */
+a.button { display: inline-block; text-decoration: none; }
+.button.quiet { background: none; color: var(--muted); padding: .25rem 0; font-weight: 500; text-decoration: underline; }
+td.actions { white-space: nowrap; }
+td.actions > * { display: inline-block; margin-right: .75rem; vertical-align: middle; }
+
+/* Adressbuch: Tags bearbeiten und auswählen */
+.inline-form, .panel form.inline-form { display: flex; flex-wrap: wrap; align-items: center; gap: .5rem; }
+.inline-form input[name="name"] { flex: 1 1 8rem; min-width: 0; }
+.inline-form input[type="color"] { width: 2.5rem; height: 2.25rem; padding: .15rem; flex: none; }
+.tag-row { display: flex; align-items: center; gap: .75rem; margin-bottom: .5rem; }
+.tag-row .inline-form { flex: 1; }
+.tag-row form { margin: 0; }
+fieldset.tag-choice { border: 0; padding: 0; margin: 0; display: flex; flex-wrap: wrap; gap: .25rem 1rem; }
+fieldset.tag-choice legend { font-weight: 500; margin-bottom: .3rem; padding: 0; }
+
+/* Zwei-Faktor-Anmeldung */
+.qr svg { display: block; width: 200px; height: auto; background: #fff; border-radius: var(--radius); padding: 4px; }
+code.secret { font-size: 1.05rem; letter-spacing: .05em; word-break: break-all; }
+ul.codes { list-style: none; padding: 0; display: grid; grid-template-columns: repeat(2, max-content); gap: .4rem 2rem; font-size: 1.1rem; }
+
+/* Anmeldung über einen Anbieter */
+.login-form .or { display: flex; align-items: center; gap: .75rem; color: var(--muted); margin: .25rem 0; }
+.login-form .or::before, .login-form .or::after { content: ""; flex: 1; border-top: 1px solid var(--line); }
+.login-form a.button.sso { text-align: center; background: none; color: var(--ink); border: 1px solid var(--line); }
+.login-form a.button.sso:hover { border-color: var(--accent); }
+.login-form-actions { display: flex; gap: 1rem; align-items: center; }
+
+/* Passkeys im Konto */
+ul.passkeys li { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .4rem 0; border-bottom: 1px solid var(--line); }
+ul.passkeys li form { margin: 0; }

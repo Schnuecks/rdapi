@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Address book') }}{% endblock %}
+{% block main %}
+<h1>{{ _('My address book') }}</h1>
+<p class="page-hint">{{ _('The same address book as in the RustDesk app. Changes appear in the app the next time it synchronises.') }}</p>
+{% if peers %}
+<div class="table-wrap">
+<table>
+  <thead><tr><th>{{ _('ID') }}</th><th>{{ _('Alias') }}</th><th>{{ _('Hostname') }}</th><th>{{ _('Platform') }}</th><th>{{ _('Tags') }}</th><th>{{ _('Note') }}</th><th></th></tr></thead>
+  <tbody>
+  {% for p in peers %}
+    <tr>
+      <td><code>{{ p.id }}</code></td>
+      <td>{{ p.alias or "–" }}</td>
+      <td>{{ p.hostname or "–" }}{% if p.username %} <span class="hint small">· {{ p.username }}</span>{% endif %}</td>
+      <td>{{ p.platform or "–" }}</td>
+      <td>{% for t in p.tags or [] %}<span class="tag" style="--tag: {{ colors.get(t, '#888888') }}">{{ t }}</span>{% endfor %}</td>
+      <td>{{ p.note if p.note is string else "" }}</td>
+      <td class="actions">
+        <a class="button quiet" href="/address-book?edit={{ p.id | urlencode }}#entry">{{ _('Edit') }}</a>
+        <form method="post" action="/address-book/peers/delete" data-confirm="{{ _('Remove {id} from the address book?', id=p.id) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <input type="hidden" name="peer_id" value="{{ p.id }}">
+          <button type="submit" class="danger-quiet">{{ _('Remove') }}</button>
+        </form>
+      </td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">{{ _('The address book is still empty.') }}</p>
+{% endif %}
+
+<div class="panels">
+  <section class="panel" id="entry">
+    <h2>{% if edit %}{{ _('Edit entry') }}{% else %}{{ _('Add entry') }}{% endif %}</h2>
+    <form method="post" action="/address-book/peers">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="original" value="{{ edit.id if edit else '' }}">
+      <label>{{ _('RustDesk ID') }} <input name="peer_id" value="{{ edit.id if edit else '' }}" maxlength="64" required></label>
+      <label>{{ _('Alias') }} <input name="alias" value="{{ edit.alias if edit and edit.alias else '' }}" maxlength="100"></label>
+      <label>{{ _('Note') }} <input name="note" value="{{ edit.note if edit and edit.note is string else '' }}" maxlength="500"></label>
+      {% if tags %}
+      <fieldset class="tag-choice">
+        <legend>{{ _('Tags') }}</legend>
+        {% for t in tags %}
+        <label class="check"><input type="checkbox" name="tags" value="{{ t.name }}"{% if edit and t.name in (edit.tags or []) %} checked{% endif %}> <span class="tag" style="--tag: {{ colors[t.name] }}">{{ t.name }}</span></label>
+        {% endfor %}
+      </fieldset>
+      {% endif %}
+      <button type="submit">{{ _('Save') }}</button>
+      {% if edit %}<a class="button quiet" href="/address-book">{{ _('Cancel') }}</a>{% endif %}
+    </form>
+  </section>
+  <section class="panel">
+    <h2>{{ _('Tags') }}</h2>
+    {% for t in tags %}
+    <div class="tag-row">
+      <form method="post" action="/address-book/tags" class="inline-form">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="original" value="{{ t.name }}">
+        <input type="color" name="color" value="{{ colors[t.name] }}" aria-label="{{ _('Colour') }}">
+        <input name="name" value="{{ t.name }}" maxlength="100" aria-label="{{ _('Name') }}" required>
+        <button type="submit" class="quiet">{{ _('Save') }}</button>
+      </form>
+      <form method="post" action="/address-book/tags/delete" data-confirm="{{ _('Delete the tag {name}? It is removed from all entries.', name=t.name) }}">
+        <input type="hidden" name="csrf" value="{{ csrf }}">
+        <input type="hidden" name="name" value="{{ t.name }}">
+        <button type="submit" class="danger-quiet">{{ _('Delete') }}</button>
+      </form>
+    </div>
+    {% else %}
+    <p class="hint">{{ _('No tags yet.') }}</p>
+    {% endfor %}
+    <form method="post" action="/address-book/tags" class="inline-form panel-foot">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="color" name="color" value="#4c9a2a" aria-label="{{ _('Colour') }}">
+      <input name="name" maxlength="100" placeholder="{{ _('New tag') }}" aria-label="{{ _('New tag') }}" required>
+      <button type="submit">{{ _('Add') }}</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

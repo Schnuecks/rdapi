@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Sign out') }}{% endblock %}
+{% block flashes %}{% endblock %}
+{% block main %}
+<div class="login-page">
+  <form method="post" action="/logout" class="login-form">
+    <img src="/static/logo.svg" alt="" width="56" height="56">
+    <h1>{{ _('Sign out') }}</h1>
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <p>{{ _('Sign out of RDAPI in this browser?') }}</p>
+    <button type="submit">{{ _('Sign out') }}</button>
+    <a class="button quiet" href="/">{{ _('Cancel') }}</a>
+  </form>
+</div>
+{% endblock %}

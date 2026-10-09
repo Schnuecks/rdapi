@@ -1,0 +1,24 @@
+{% if rows %}
+<div class="table-wrap">
+<table>
+  <thead><tr>
+    <th>{{ _('Start') }}</th>{% if show_device %}<th>{{ _('On device') }}</th>{% endif %}<th>{{ _('From') }}</th><th>{{ _('IP') }}</th><th>{{ _('Type') }}</th><th>{{ _('Authorised by') }}</th><th>{{ _('Duration') }}</th>
+  </tr></thead>
+  <tbody>
+  {% for c in rows %}
+    <tr{% if not c.authed_at %} class="dim"{% endif %}>
+      <td>{{ c.started_at | dt }}</td>
+      {% if show_device %}<td><a href="/devices/{{ c.device_id | urlencode }}"><code>{{ c.device_id }}</code></a>{% if c.hostname %} {{ c.hostname }}{% endif %}</td>{% endif %}
+      <td>{% if c.peer_id %}<code>{{ c.peer_id }}</code> {{ c.peer_name }}{% else %}–{% endif %}</td>
+      <td>{{ c.ip or "–" }}</td>
+      <td>{% if c.authed_at %}{{ _(CONN_TYPES.get(c.conn_type, "unknown")) }}{% else %}{{ _('not accepted') }}{% endif %}</td>
+      <td>{% if c.primary_auth in PRIMARY_AUTH %}{{ _(PRIMARY_AUTH[c.primary_auth]) }}{% else %}–{% endif %}</td>
+      <td>{% if c.authed_at %}{{ c | duration }}{% else %}–{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% else %}
+<p class="empty">{{ _('No connections.') }}</p>
+{% endif %}

@@ -1,0 +1,42 @@
+name: Wiki
+
+# Spiegelt docs/ ins GitHub-Wiki: bei jedem Release (Versions-Tag) und auf Knopfdruck.
+# Die Doku bleibt im Repo die einzige Quelle; Änderungen im Wiki werden überschrieben.
+
+on:
+  push:
+    tags: ["v*"]
+  workflow_dispatch:
+
+concurrency:
+  group: wiki
+  cancel-in-progress: false
+
+jobs:
+  wiki:
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: write  # zum Schreiben ins Wiki-Repo
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/checkout@v7
+        with:
+          repository: ${{ github.repository }}.wiki
+          path: wiki
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Seiten erzeugen
+        run: python tools/wiki_sync.py wiki --repo "$GITHUB_REPOSITORY" --version "$GITHUB_REF_NAME"
+      - name: Ins Wiki hochladen
+        working-directory: wiki
+        run: |
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki ist schon aktuell."
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git commit -m "Docs from $GITHUB_REF_NAME"
+          git push

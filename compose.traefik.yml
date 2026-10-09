@@ -1,0 +1,59 @@
+# Stack behind Traefik with a login page (e.g. Authelia), an IP blocklist and a rate limit on the app login.
+# Copy to compose.yml next to .env (see .env.example), data in ./data.
+name: rdapi
+
+x-defaults: &defaults
+  restart: ${RESTART}
+  stop_grace_period: ${STOPTIME}
+  networks: [proxy]
+  security_opt: ["${SECOPTS}"]
+  logging:
+    driver: json-file
+    options: { max-size: 10m, max-file: "3" }
+
+x-env: &env
+  TZ: ${TZ}
+
+x-health: &health
+  interval: 30s
+  timeout: 5s
+  retries: 3
+  start_period: 20s
+  start_interval: 5s
+
+services:
+  rdapi:
+    <<: *defaults
+    image: ${RDAPI_IMAGE:-ghcr.io/schnuecks/rdapi:latest}
+    container_name: ${SVC}
+    user: "${PUID}:${PGID}"
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs: [/tmp]
+    environment:
+      <<: *env
+    volumes:
+      - ./data:/data
+    healthcheck:
+      <<: *health
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:21114/healthz', timeout=3)"]
+    labels:
+      traefik.enable: "true"
+      # Adjust the middleware names to your Traefik setup.
+      # App login: IP blocklist + WAF + rate limit
+      traefik.http.routers.rdapi-login.rule: Host(`${DOMAIN}`) && Path(`/api/login`)
+      traefik.http.routers.rdapi-login.priority: "300"
+      traefik.http.routers.rdapi-login.middlewares: ipblock@file,waf@file,rustdesk-login-ratelimit@file
+      # Rest of the app API: no login page (the app cannot handle it), IP blocklist + WAF
+      traefik.http.routers.rdapi-api.rule: Host(`${DOMAIN}`) && PathPrefix(`/api/`)
+      traefik.http.routers.rdapi-api.priority: "200"
+      traefik.http.routers.rdapi-api.middlewares: ipblock@file,waf@file
+      # Web UI: everything else, behind Authelia
+      traefik.http.routers.rdapi-web.rule: Host(`${DOMAIN}`)
+      traefik.http.routers.rdapi-web.priority: "100"
+      traefik.http.routers.rdapi-web.middlewares: authelia@file,ipblock@file
+      traefik.http.services.rdapi.loadbalancer.server.port: "21114"
+
+networks:
+  proxy:
+    external: true

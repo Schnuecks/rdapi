@@ -1,0 +1,22 @@
+# Minimal setup: web UI and API on port 21114, data in ./data.
+# Behind Traefik with a login page and an IP blocklist, see compose.traefik.yml.
+services:
+  rdapi:
+    image: ${RDAPI_IMAGE:-ghcr.io/schnuecks/rdapi:latest}
+    container_name: rdapi
+    restart: unless-stopped
+    user: "${PUID:-1000}:${PGID:-1000}"
+    read_only: true
+    cap_drop: [ALL]
+    tmpfs: [/tmp]
+    security_opt:
+      - no-new-privileges:true
+    env_file:
+      - path: .env       # optional, e.g. RDAPI_DEFAULT_LANGUAGE
+        required: false
+    environment:
+      - TZ=${TZ:-Europe/Berlin}
+    ports:
+      - "${PORT:-21114}:21114"
+    volumes:
+      - ${DATA:-./data}:/data             # SQLite database

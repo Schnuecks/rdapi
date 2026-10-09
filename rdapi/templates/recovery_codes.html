@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Recovery codes') }}{% endblock %}
+{% block main %}
+<a class="back" href="/account">{{ _('Account') }}</a>
+<h1>{{ _('Recovery codes') }}</h1>
+{% if new %}<p class="flash">{{ _('Two-factor sign-in is now on.') }}</p>{% endif %}
+{% if passkey %}<p class="flash">{{ _('The passkey has been added. From now on, the web interface asks for it after the password.') }}</p>{% endif %}
+<section class="panel panel-narrow">
+  <p>{{ _('If you lose your phone, you can sign in with one of these codes instead of the code from the app. Each code works once.') }}</p>
+  <ul class="codes">{% for c in codes %}<li><code>{{ c }}</code></li>{% endfor %}</ul>
+  <p><strong>{{ _('Write them down or store them in your password manager now. They are shown only this once.') }}</strong></p>
+  <p><a class="button" href="/account">{{ _('Done') }}</a></p>
+</section>
+{% endblock %}

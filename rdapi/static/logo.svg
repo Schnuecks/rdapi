@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="RDAPI">
+  <!-- RDAPI: Bildschirm mit Fernzugriffs-Mauszeiger und Funkbögen -->
+  <rect width="64" height="64" rx="14" fill="#0B5FB0"/>
+  <!-- Funkbögen oben rechts -->
+  <path d="M44 8a12 12 0 0 1 12 12" fill="none" stroke="#9CCBF5" stroke-width="3" stroke-linecap="round"/>
+  <path d="M44 14a6 6 0 0 1 6 6" fill="none" stroke="#9CCBF5" stroke-width="3" stroke-linecap="round"/>
+  <circle cx="44" cy="20" r="2.4" fill="#9CCBF5"/>
+  <!-- Bildschirm -->
+  <rect x="9" y="17" width="38" height="27" rx="3.5" fill="#F2F7FD"/>
+  <rect x="13" y="21" width="30" height="19" rx="1.5" fill="#2F86D6"/>
+  <!-- Fenster auf dem Bildschirm -->
+  <rect x="16" y="24" width="15" height="10" rx="1" fill="#CFE5FA"/>
+  <rect x="16" y="24" width="15" height="2.5" rx="1" fill="#F2F7FD"/>
+  <!-- Standfuß -->
+  <path d="M24 44h8l1.5 6h-11z" fill="#CFE5FA"/>
+  <rect x="18" y="49.5" width="20" height="3.5" rx="1.75" fill="#F2F7FD"/>
+  <!-- Mauszeiger der Fernsitzung -->
+  <path d="M37 29v20l5-4.6 3.4 7.6 3.4-1.5-3.4-7.5 6.8-.4z" fill="#F6A23C" stroke="#0B5FB0" stroke-width="1.6" stroke-linejoin="round"/>
+</svg>

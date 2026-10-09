@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Sign in') }}{% endblock %}
+{% block flashes %}{% endblock %}
+{% block main %}
+<div class="login-page">
+  <form method="post" action="/login/code" class="login-form">
+    <img src="/static/logo.svg" alt="" width="56" height="56">
+    <h1>{{ _('Verification code') }}</h1>
+    {% if error %}<p class="flash flash-warn">{{ error }}</p>{% endif %}
+    <input type="hidden" name="pending" value="{{ pending }}">
+    <input type="hidden" name="next" value="{{ next }}">
+    {% if keys %}
+    <button type="button" data-passkey-second data-pending="{{ pending }}" data-next="{{ next }}" hidden>{{ _('Use passkey or security key') }}</button>
+    <p class="flash flash-warn" data-passkey-error hidden
+       data-fallback="{{ _('The passkey could not be verified. Please try again.') }}"
+       data-cancelled="{{ _('Cancelled or not possible on this device.') }}"></p>
+    <p class="or"><span>{{ _('or') }}</span></p>
+    {% endif %}
+    {% if totp %}
+    <label>{{ _('Code from your authenticator app') }}
+      <input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required{% if not keys %} autofocus{% endif %}></label>
+    <button type="submit"{% if keys %} class="button sso"{% endif %}>{{ _('Sign in') }}</button>
+    <p class="hint small">{{ _('No phone at hand? Enter one of your recovery codes instead.') }}</p>
+    {% else %}
+    <label>{{ _('Recovery code') }}
+      <input name="code" autocomplete="off" maxlength="12" required></label>
+    <button type="submit" class="button sso">{{ _('Sign in') }}</button>
+    <p class="hint small">{{ _('Only if your passkey is not at hand.') }}</p>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Sign in') }}{% endblock %}
+{% block flashes %}{% endblock %}
+{% block main %}
+<div class="login-page">
+  <form method="post" action="/login" class="login-form">
+    <img src="/static/logo.svg" alt="" width="56" height="56">
+    <h1>{{ _('Sign in') }}</h1>
+    {% if error %}<p class="flash flash-warn">{{ error }}</p>{% endif %}
+    <input type="hidden" name="next" value="{{ next }}">
+    <label>{{ _('Username') }} <input name="username" autocomplete="username" required autofocus></label>
+    <label>{{ _('Password') }} <input name="password" type="password" autocomplete="current-password" required></label>
+    <button type="submit">{{ _('Sign in') }}</button>
+    <p class="hint small">{{ _('Same credentials as in the RustDesk app.') }}</p>
+    {% if sso_name or passkey_login %}
+    <p class="or"><span>{{ _('or') }}</span></p>
+    {% endif %}
+    {% if passkey_login %}
+    <button type="button" class="button sso" data-passkey-login data-next="{{ next }}" hidden>{{ _('Sign in with a passkey') }}</button>
+    <p class="flash flash-warn" data-passkey-error hidden
+       data-fallback="{{ _('The passkey could not be verified. Please try again.') }}"
+       data-cancelled="{{ _('Cancelled or not possible on this device.') }}"></p>
+    {% endif %}
+    {% if sso_name %}
+    <a class="button sso" href="/login/oidc?next={{ next | urlencode }}">{{ _('Sign in with {name}', name=sso_name) }}</a>
+    {% endif %}
+  </form>
+</div>
+{% endblock %}

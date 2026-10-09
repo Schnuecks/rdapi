@@ -1,0 +1,9 @@
+fastapi==0.142.2
+uvicorn==0.54.0
+jinja2==3.1.6
+python-multipart==0.0.32
+argon2-cffi==25.1.0
+segno==1.6.6
+webauthn==3.0.1
+cryptography==50.0.2
+tzdata==2026.4

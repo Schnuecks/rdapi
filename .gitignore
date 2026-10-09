@@ -1,0 +1,9 @@
+__pycache__/
+.pytest_cache/
+.ruff_cache/
+data/
+.env
+*.sqlite3*
+
+# Lokale Hinweise für Claude, nicht im Repo
+CLAUDE.md

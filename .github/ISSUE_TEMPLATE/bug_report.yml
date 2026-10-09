@@ -1,0 +1,67 @@
+name: Bug report
+description: Something does not work as expected
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time to report a problem. Please fill in as much as you can;
+        German is fine too. Connection problems between devices usually come from the ID or
+        relay server; the troubleshooting section of the documentation helps there.
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: What did you do, what did you expect, and what happened instead?
+      placeholder: |
+        1. Set the API server in the RustDesk app on Windows
+        2. Signed in with my account
+        3. Expected my address book, got "Failed to fetch"
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Sign-in in the RustDesk app
+        - Sign-in in the web interface (password, two-factor, passkeys, single sign-on)
+        - Address book
+        - Devices
+        - Connection history
+        - Users or backups
+        - Installation, reverse proxy or update
+        - Something else
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: RDAPI version
+      description: Shown in the footer of the web interface.
+      placeholder: e.g. 0.6.0
+    validations:
+      required: true
+  - type: input
+    id: app
+    attributes:
+      label: RustDesk app version and platform
+      placeholder: e.g. 1.5.0 on Windows 11, 1.5.0 on iOS
+  - type: input
+    id: setup
+    attributes:
+      label: Setup
+      placeholder: e.g. Docker on a Raspberry Pi 5, behind a reverse proxy with HTTPS
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log
+      description: |
+        Relevant lines from `docker compose logs rdapi`. Please remove passwords,
+        tokens and addresses first.
+      render: text
+  - type: textarea
+    id: extra
+    attributes:
+      label: Anything else?
+      description: Screenshots or the error message shown in the app help a lot.

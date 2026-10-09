@@ -1,0 +1,33 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Users') }}{% endblock %}
+{% block main %}
+<h1>{{ _('Users') }}</h1>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>{{ _('Username') }}</th><th>{{ _('Display name') }}</th><th>{{ _('Role') }}</th><th>{{ _('Status') }}</th><th>{{ _('Devices') }}</th><th>{{ _('Last login') }}</th></tr></thead>
+  <tbody>
+  {% for u in users %}
+    <tr>
+      <td><a href="/users/{{ u.id }}">{{ u.username }}</a></td>
+      <td>{{ u.display_name or "–" }}</td>
+      <td>{% if u.is_admin %}{{ _('Admin') }}{% else %}{{ _('User') }}{% endif %}</td>
+      <td>{% if u.enabled %}{{ _('active') }}{% else %}<strong class="bad">{{ _('disabled') }}</strong>{% endif %}</td>
+      <td>{{ u.device_count }}</td>
+      <td>{{ u.last_login_at | dt }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+<section class="panel panel-narrow">
+  <h2>{{ _('New user') }}</h2>
+  <form method="post" action="/users/new">
+    <input type="hidden" name="csrf" value="{{ csrf }}">
+    <label>{{ _('Username') }} <input name="username" required maxlength="64" autocomplete="off"></label>
+    <label>{{ _('Display name') }} <input name="display_name" maxlength="100"></label>
+    <label>{{ _('Password') }} <input name="password" type="password" minlength="10" required autocomplete="new-password"></label>
+    <label class="check"><input type="checkbox" name="is_admin" value="1"> {{ _('Admin') }}</label>
+    <button type="submit">{{ _('Create user') }}</button>
+  </form>
+</section>
+{% endblock %}

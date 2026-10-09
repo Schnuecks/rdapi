@@ -1,0 +1,87 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Account') }}{% endblock %}
+{% block main %}
+<h1>{{ _('Account') }}<code>{{ user.username }}</code></h1>
+<div class="panels">
+  <section class="panel">
+    <h2>{{ _('Change password') }}</h2>
+    <form method="post" action="/account/password">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('Current password') }} <input name="old" type="password" autocomplete="current-password" required></label>
+      <label>{{ _('New password') }} <input name="new" type="password" autocomplete="new-password" minlength="10" required></label>
+      <label>{{ _('Repeat new password') }} <input name="new2" type="password" autocomplete="new-password" minlength="10" required></label>
+      <button type="submit">{{ _('Change password') }}</button>
+      <p class="hint small">{{ _('This ends all other sessions, including the app.') }}</p>
+    </form>
+  </section>
+  <section class="panel">
+    <h2>{{ _('Two-factor sign-in') }}</h2>
+    {% if user.totp_enabled %}
+    <p><span class="dot on"></span> {{ _('On. After the password, the web interface and the app ask for a code from your authenticator app.') }}</p>
+    <p class="hint small">{{ _('Unused recovery codes: {count}', count=recovery_left) }}</p>
+    <form method="post" action="/account/2fa/recovery">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('Password') }} <input name="password" type="password" autocomplete="current-password" required></label>
+      <label>{{ _('Code from your authenticator app') }} <input name="code" inputmode="numeric" autocomplete="one-time-code" maxlength="12" required></label>
+      <button type="submit">{{ _('New recovery codes') }}</button>
+      <button type="submit" class="danger-quiet" formaction="/account/2fa/disable">{{ _('Turn off') }}</button>
+    </form>
+    {% else %}
+    <p>{{ _('Protects your account even if someone knows your password: after the password, you also enter a code from an authenticator app on your phone.') }}</p>
+    <form method="post" action="/account/2fa/start">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit">{{ _('Set up') }}</button>
+    </form>
+    {% endif %}
+  </section>
+  <section class="panel">
+    <h2>{{ _('Passkeys and security keys') }}</h2>
+    <p>{{ _('Sign in without a password, with fingerprint, face or PIN on your device or with a security key. Once you have a passkey, the web interface also asks for it after the password.') }}</p>
+    {% if passkeys %}
+    <ul class="plain-list passkeys">
+      {% for k in passkeys %}
+      <li>
+        <span><strong>{{ k.name }}</strong><br><span class="hint small">{{ _('Added') }} {{ k.created_at | dt }}{% if k.last_used_at %} · {{ _('last used') }} {{ k.last_used_at | dt }}{% endif %}</span></span>
+        <form method="post" action="/account/passkeys/{{ k.id }}/delete" data-confirm="{{ _('Remove the passkey {name}?', name=k.name) }}">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="danger-quiet">{{ _('Remove') }}</button>
+        </form>
+      </li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+    <p class="flash flash-warn" data-passkey-error hidden
+       data-fallback="{{ _('The passkey could not be verified. Please try again.') }}"
+       data-cancelled="{{ _('Cancelled or not possible on this device.') }}"></p>
+    <form data-passkey-register hidden>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('Name') }} <input name="name" maxlength="60" placeholder="{{ _('e.g. Laptop or security key') }}"></label>
+      <button type="submit">{{ _('Add passkey') }}</button>
+    </form>
+    <p class="hint small" data-passkey-unsupported>{{ _('This browser cannot use passkeys here. Passkeys need HTTPS (or localhost).') }}</p>
+  </section>
+  <section class="panel">
+    <h2>{{ _('Signed in') }}</h2>
+    <div class="table-wrap">
+    <table>
+      <thead><tr><th>{{ _('Where') }}</th><th>{{ _('Client') }}</th><th>{{ _('Last active') }}</th><th></th></tr></thead>
+      <tbody>
+      {% for s in sessions %}
+        <tr>
+          <td>{% if s.kind == 'app' %}{{ _('App') }}{% else %}{{ _('Web') }}{% endif %}{% if s.id == current_session %} <span class="badge">{{ _('this one') }}</span>{% endif %}</td>
+          <td>{% if s.device_id %}<code>{{ s.device_id }}</code> {% endif %}<span class="small">{{ s.client_info }}</span>{% if s.ip %} <span class="hint small">· {{ s.ip }}</span>{% endif %}</td>
+          <td>{{ s.last_used_at | dt }}</td>
+          <td>
+            <form method="post" action="/account/sessions/{{ s.id }}/end">
+              <input type="hidden" name="csrf" value="{{ csrf }}">
+              <button type="submit" class="quiet">{{ _('End') }}</button>
+            </form>
+          </td>
+        </tr>
+      {% endfor %}
+      </tbody>
+    </table>
+    </div>
+  </section>
+</div>
+{% endblock %}

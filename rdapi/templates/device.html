@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}{{ device.hostname or device.id }}{% endblock %}
+{% block main %}
+<a class="back" href="/">{{ _('Devices') }}</a>
+<h1>{{ device.hostname or _('Device') }}<code>{{ device.id }}</code></h1>
+<div class="panels">
+  <section class="panel">
+    <h2>{{ _('Details') }}</h2>
+    <dl class="facts">
+      <dt>{{ _('Status') }}</dt><dd>{% if device.last_seen_at and device.last_seen_at >= online_after %}<span class="dot on"></span> {{ _('online') }}{% else %}<span class="dot"></span> {{ _('offline') }}{% endif %}</dd>
+      <dt>{{ _('Last seen') }}</dt><dd>{{ device.last_seen_at | dt }}{% if device.last_ip %} · {{ device.last_ip }}{% endif %}</dd>
+      <dt>{{ _('Operating system') }}</dt><dd>{{ device.os or "–" }}</dd>
+      <dt>{{ _('System user') }}</dt><dd>{{ device.username or "–" }}</dd>
+      <dt>{{ _('CPU') }}</dt><dd>{{ device.cpu or "–" }}</dd>
+      <dt>{{ _('Memory') }}</dt><dd>{{ device.memory or "–" }}</dd>
+      <dt>{{ _('RustDesk version') }}</dt><dd>{{ device.version or "–" }}</dd>
+      <dt>{{ _('First seen') }}</dt><dd>{{ device.created_at | dt }}</dd>
+    </dl>
+  </section>
+  <section class="panel">
+    <h2>{{ _('Edit') }}</h2>
+    <form method="post" action="/devices/{{ device.id | urlencode }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <label>{{ _('Note') }} <input name="note" value="{{ device.note }}" maxlength="500"></label>
+      {% if user.is_admin %}
+      <label>{{ _('Owner') }}
+        <select name="owner">
+          <option value="">{{ _('– nobody –') }}</option>
+          {% for u in users %}<option value="{{ u.id }}"{% if u.id == device.user_id %} selected{% endif %}>{{ u.username }}</option>{% endfor %}
+        </select>
+      </label>
+      {% endif %}
+      <button type="submit">{{ _('Save') }}</button>
+    </form>
+    {% if user.is_admin %}
+    <form method="post" action="/devices/{{ device.id | urlencode }}/delete" class="panel-foot" data-confirm="{{ _('Really remove this device? It reappears as soon as it reports again.') }}">
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <button type="submit" class="danger-quiet">{{ _('Remove device') }}</button>
+    </form>
+    {% endif %}
+  </section>
+</div>
+<h2>{{ _('Latest connections to this device') }}</h2>
+{% include "_connections.html" %}
+<p><a href="/history?device={{ device.id | urlencode }}">{{ _('Show full history') }}</a></p>
+<details class="panel">
+  <summary>{{ _('Reported system information (raw)') }}</summary>
+  <pre>{{ sysinfo }}</pre>
+</details>
+{% endblock %}

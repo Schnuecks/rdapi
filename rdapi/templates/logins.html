@@ -1,0 +1,23 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Logins') }}{% endblock %}
+{% block main %}
+<h1>{{ _('Logins') }}</h1>
+<p class="page-hint">{{ _('The last 200 sign-in attempts in the app and the web UI.') }}</p>
+<div class="table-wrap">
+<table>
+  <thead><tr><th>{{ _('Time') }}</th><th>{{ _('User') }}</th><th>{{ _('Via') }}</th><th>{{ _('IP') }}</th><th>{{ _('Result') }}</th><th>{{ _('Details') }}</th></tr></thead>
+  <tbody>
+  {% for r in rows %}
+    <tr>
+      <td>{{ r.created_at | dt }}</td>
+      <td>{{ r.username or "–" }}</td>
+      <td>{% if r.source == 'app' %}{{ _('App') }}{% else %}{{ _('Web') }}{% endif %}</td>
+      <td>{{ r.ip }}</td>
+      <td>{% if r.success %}<span class="good">{{ _('successful') }}</span>{% else %}<span class="bad">{{ _('failed') }}</span>{% endif %}</td>
+      <td class="small">{{ r.detail }}</td>
+    </tr>
+  {% endfor %}
+  </tbody>
+</table>
+</div>
+{% endblock %}

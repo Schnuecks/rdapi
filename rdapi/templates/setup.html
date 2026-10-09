@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Set up') }}{% endblock %}
+{% block flashes %}{% endblock %}
+{% block main %}
+<div class="login-page">
+  <form method="post" action="/setup" class="login-form setup-form">
+    <img src="/static/logo.svg" alt="" width="56" height="56">
+    <h1>{{ _('Create admin account') }}</h1>
+    <p class="hint">{{ _('Welcome to RDAPI. Create your account first; you can add more users afterwards under “Users”.') }}</p>
+    {% if error %}<p class="flash flash-warn" role="alert">{{ error }}</p>{% endif %}
+    <label>{{ _('Setup code') }}
+      <input type="text" name="code" autocomplete="one-time-code" autocapitalize="characters" spellcheck="false" required{% if not username %} autofocus{% endif %}>
+      <span class="hint small">{{ _('It is in the container log, e.g. via {cmd}. This way nobody else on the network can create the account before you.', cmd='<code>docker compose logs rdapi</code>') | safe }}</span>
+    </label>
+    <label>{{ _('Username') }}
+      <input name="username" value="{{ username }}" autocomplete="username" autocapitalize="none" spellcheck="false" maxlength="64" required>
+    </label>
+    <label>{{ _('Password') }}
+      <input name="password" type="password" autocomplete="new-password" minlength="10" required{% if username %} autofocus{% endif %}>
+      <span class="hint small">{{ _('At least 10 characters.') }}</span>
+    </label>
+    <label>{{ _('Repeat password') }}
+      <input name="repeat" type="password" autocomplete="new-password" minlength="10" required>
+    </label>
+    <button type="submit">{{ _('Create account') }}</button>
+  </form>
+</div>
+{% endblock %}
