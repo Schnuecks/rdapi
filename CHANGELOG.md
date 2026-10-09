@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.1
 
 - **More uniform pages:** detail pages (device, user, group, shared address book) all show
   details on the left and the edit form on the right, with remove and delete actions at the
