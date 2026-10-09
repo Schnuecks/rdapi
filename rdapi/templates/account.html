@@ -38,7 +38,7 @@
     <h2>{{ _('Passkeys and security keys') }}</h2>
     <p class="hint">{{ _('Sign in without a password, with fingerprint, face or PIN on your device or with a security key. Once you have a passkey, the web interface also asks for it after the password.') }}</p>
     {% if passkeys %}
-    <ul class="plain-list passkeys">
+    <ul class="plain-list item-list">
       {% for k in passkeys %}
       <li>
         <span><strong>{{ k.name }}</strong><br><span class="hint small">{{ _('Added') }} {{ k.created_at | dt }}{% if k.last_used_at %} · {{ _('last used') }} {{ k.last_used_at | dt }}{% endif %}</span></span>
@@ -62,26 +62,21 @@
   </section>
   <section class="panel">
     <h2>{{ _('Signed in') }}</h2>
-    <div class="table-wrap">
-    <table>
-      <thead><tr><th>{{ _('Where') }}</th><th>{{ _('Client') }}</th><th>{{ _('Last active') }}</th><th></th></tr></thead>
-      <tbody>
+    <ul class="plain-list item-list">
       {% for s in sessions %}
-        <tr>
-          <td>{% if s.kind == 'app' %}{{ _('App') }}{% else %}{{ _('Web') }}{% endif %}{% if s.id == current_session %} <span class="badge">{{ _('this one') }}</span>{% endif %}</td>
-          <td>{% if s.device_id %}<code>{{ s.device_id }}</code> {% endif %}<span class="small">{{ s.client_info }}</span>{% if s.ip %} <span class="hint small">· {{ s.ip }}</span>{% endif %}</td>
-          <td>{{ s.last_used_at | dt }}</td>
-          <td>
-            <form method="post" action="/account/sessions/{{ s.id }}/end">
-              <input type="hidden" name="csrf" value="{{ csrf }}">
-              <button type="submit" class="quiet">{{ _('End') }}</button>
-            </form>
-          </td>
-        </tr>
+      <li>
+        <span>
+          <strong>{% if s.kind == 'app' %}{{ _('App') }}{% else %}{{ _('Web') }}{% endif %}</strong>{% if s.id == current_session %} <span class="badge">{{ _('this one') }}</span>{% endif %}
+          · {% if s.device_id %}<code>{{ s.device_id }}</code> {% endif %}<span title="{{ s.client_info }}">{{ s.client_info | client }}</span>
+          <br><span class="hint small">{{ _('Last active') }} {{ s.last_used_at | dt }}{% if s.ip %} · {{ s.ip }}{% endif %}</span>
+        </span>
+        <form method="post" action="/account/sessions/{{ s.id }}/end">
+          <input type="hidden" name="csrf" value="{{ csrf }}">
+          <button type="submit" class="quiet">{{ _('End') }}</button>
+        </form>
+      </li>
       {% endfor %}
-      </tbody>
-    </table>
-    </div>
+    </ul>
   </section>
 </div>
 {% endblock %}

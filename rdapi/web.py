@@ -109,6 +109,32 @@ MESSAGES = {
 }
 
 
+BROWSERS = (
+    ("Edg/", "Edge"),
+    ("OPR/", "Opera"),
+    ("Firefox/", "Firefox"),
+    ("Chrome/", "Chrome"),
+    ("Safari/", "Safari"),
+)
+SYSTEMS = (
+    ("iPhone", "iOS"),
+    ("iPad", "iPadOS"),
+    ("Android", "Android"),
+    ("Windows", "Windows"),
+    ("Mac OS X", "macOS"),
+    ("Linux", "Linux"),
+)
+
+
+def client_label(info: str) -> str:
+    """Kurzform eines Browser-Kennzeichens, z. B. „Chrome · Windows“; App-Angaben bleiben."""
+    browser = next((name for key, name in BROWSERS if key in info), "")
+    system = next((name for key, name in SYSTEMS if key in info), "")
+    if browser or system:
+        return " · ".join(part for part in (browser, system) if part)
+    return info[:80]
+
+
 class LoginRequired(Exception):
     pass
 
@@ -146,6 +172,7 @@ def setup_filters(tz: str) -> None:
 
     templates.env.filters["dt"] = dt
     templates.env.filters["duration"] = duration
+    templates.env.filters["client"] = client_label
     templates.env.globals.update(
         _=_,
         lang=i18n.current,
