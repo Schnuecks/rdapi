@@ -4,6 +4,3 @@ __pycache__/
 data/
 .env
 *.sqlite3*
-
-# Lokale Hinweise für Claude, nicht im Repo
-CLAUDE.md
