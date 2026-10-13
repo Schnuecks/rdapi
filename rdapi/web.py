@@ -274,6 +274,14 @@ def healthz(conn: sqlite3.Connection = Depends(get_db)) -> dict[str, str]:
     return {"status": "ok"}
 
 
+def _pick(value: str | None, choices) -> str | None:
+    """Der passende Eintrag aus der eigenen Liste (nicht die Eingabe selbst) oder None."""
+    for choice in choices:
+        if choice == value:
+            return choice
+    return None
+
+
 @router.post("/appearance")
 def appearance(
     lang: str | None = Form(None),
@@ -281,12 +289,15 @@ def appearance(
     next: str = Form("/"),
 ) -> Response:
     response = redirect(safe_next(next))
-    if lang in i18n.LANGUAGES:
-        response.set_cookie(i18n.LANG_COOKIE, lang, max_age=ONE_YEAR, samesite="lax")
+    # Gespeichert wird nur ein Wert aus der eigenen Liste, nie die Eingabe selbst.
+    chosen_lang = _pick(lang, i18n.LANGUAGES)
+    if chosen_lang:
+        response.set_cookie(i18n.LANG_COOKIE, chosen_lang, max_age=ONE_YEAR, samesite="lax")
     elif lang == "auto":
         response.delete_cookie(i18n.LANG_COOKIE)
-    if theme in i18n.THEMES:
-        response.set_cookie(i18n.THEME_COOKIE, theme, max_age=ONE_YEAR, samesite="lax")
+    chosen_theme = _pick(theme, i18n.THEMES)
+    if chosen_theme:
+        response.set_cookie(i18n.THEME_COOKIE, chosen_theme, max_age=ONE_YEAR, samesite="lax")
     return response
 
 
@@ -522,7 +533,7 @@ def oidc_start(
             conn, cfg, str(request.base_url), "web", next_url=safe_next(next)
         )
     except oidc.OidcError as exc:
-        return _login_error(request, str(exc), 502)
+        return _login_error(request, oidc.public_message(exc), 502)
     response = RedirectResponse(url, status_code=303)
     # Bindet den Rücksprung an diesen Browser; ohne könnte man jemandem eine fremde
     # Anmeldung unterschieben.
@@ -576,7 +587,7 @@ def oidc_callback(
     except oidc.OidcError as exc:
         conn.execute("DELETE FROM oidc_flows WHERE id = ?", (flow["id"],))
         log_login(conn, "", None, flow["kind"], ip, False, f"SSO: {exc}")
-        return _login_error(request, str(exc))
+        return _login_error(request, oidc.public_message(exc))
     return render(
         request, "oidc_confirm.html", None, flow=flow, account=user, confirm=confirm, done=False
     )
@@ -2024,7 +2035,7 @@ async def passkey_login(
     except passkeys.PasskeyError as exc:
         lim.failure(ip, "")
         log_login(conn, "", None, "web", ip, False, f"passkey: {exc}")
-        return _json_error(str(exc))
+        return _json_error(passkeys.public_message(exc))
 
 
 @router.post("/login/code/passkey/options")
@@ -2068,7 +2079,7 @@ async def passkey_second(
             )
     except passkeys.PasskeyError as exc:
         lim.failure(ip, "")
-        return _json_error(str(exc))
+        return _json_error(passkeys.public_message(exc))
 
 
 @router.post("/account/passkeys/options")
@@ -2084,7 +2095,7 @@ async def passkey_register_options(
     try:
         return JSONResponse(passkeys.registration_options(conn, user, rp_id))
     except passkeys.PasskeyError as exc:
-        return _json_error(str(exc))
+        return _json_error(passkeys.public_message(exc))
 
 
 @router.post("/account/passkeys")
@@ -2123,7 +2134,7 @@ async def passkey_register(
                 else new_recovery_codes(conn, user["id"])
             )
     except passkeys.PasskeyError as exc:
-        return _json_error(str(exc))
+        return _json_error(passkeys.public_message(exc))
     if codes:
         return render(request, "recovery_codes.html", user, codes=codes, new=False, passkey=True)
     return redirect("/account", "passkey")
