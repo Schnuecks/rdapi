@@ -96,6 +96,13 @@ siehe [Installation](docs/de/installation.md).
 
 Was sich in jeder Version geändert hat, steht im [CHANGELOG](CHANGELOG.md) (englisch).
 
+## Wie es entsteht
+
+RDAPI entsteht mit Unterstützung eines KI-Assistenten. Funktionen und Verhalten lege ich fest,
+prüfe die Änderungen und teste sie auf meinem eigenen Server mit der RustDesk-App.
+Veröffentlicht wird nur, was die automatischen Prüfungen besteht: die Tests und ein
+Sicherheitsscan des Container-Images.
+
 ## Unterstützen
 
 RDAPI ist kostenlos und bleibt es. Wenn es dir Zeit spart, kannst du mir einen
