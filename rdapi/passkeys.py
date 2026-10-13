@@ -47,6 +47,12 @@ UNKNOWN = "This passkey is not known here."
 EXPIRED = "The request has expired. Please try again."
 TOO_MANY = "You already have the maximum number of passkeys."
 MESSAGES = (FAILED, UNKNOWN, EXPIRED, TOO_MANY)
+_SHOWN = {m: m for m in MESSAGES}
+
+
+def public_message(exc: PasskeyError) -> str:
+    """Nur einer der festen Texte geht an den Browser, nie der Inhalt einer Ausnahme."""
+    return _SHOWN.get(str(exc), FAILED)
 
 
 def relying_party(public_url: str, base_url: str) -> tuple[str, str]:

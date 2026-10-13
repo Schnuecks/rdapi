@@ -45,6 +45,12 @@ EXPIRED = "The sign-in has expired. Please sign in again."
 NO_ACCOUNT = "There is no account for you yet. Please ask an admin to create one."
 DISABLED = "Your account is disabled."
 MESSAGES = (FAILED, EXPIRED, NO_ACCOUNT, DISABLED)
+_SHOWN = {m: m for m in MESSAGES}
+
+
+def public_message(exc: OidcError) -> str:
+    """Nur einer der festen Texte wird angezeigt, nie der Inhalt einer Ausnahme."""
+    return _SHOWN.get(str(exc), FAILED)
 
 
 def _http_json(url: str, data: dict[str, str] | None = None, token: str = "") -> dict:

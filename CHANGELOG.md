@@ -1,5 +1,11 @@
 # Changelog
 
+## Unreleased
+
+- **Code scanning findings resolved:** error messages of passkeys and single sign-on are
+  always one of the fixed texts, and the language and theme cookies store only values from
+  the built-in lists. No behaviour changes.
+
 ## 0.10.2
 
 - **No more sideways scrolling inside panels:** the sign-ins on the account page and the
