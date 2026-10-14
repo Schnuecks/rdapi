@@ -28,7 +28,7 @@ bei `compose.traefik.yml` unter `environment:` des Dienstes. Danach
 | `RDAPI_BACKUP_KEEP` | `7` | Anzahl der täglichen Sicherungen, die erhalten bleiben; `0` schaltet sie ab |
 | `RDAPI_BACKUP_DIR` | `/data/backups` | Ordner für die Sicherungen |
 | `RDAPI_DB_PATH` | `/data/rdapi.sqlite3` | Ort der Datenbank |
-| `FORWARDED_ALLOW_IPS` | lokale und private Netze | Adressen von Reverse Proxys, deren `X-Forwarded-For` vertraut wird, siehe unten |
+| `FORWARDED_ALLOW_IPS` | lokale und private Netze (`127.0.0.1` in `compose.yaml`) | Adressen von Reverse Proxys, deren `X-Forwarded-For` vertraut wird, siehe unten |
 | `PUID`, `PGID` | `1000` | Benutzer und Gruppe, unter denen der Container läuft |
 | `PORT` | `21114` | Port auf dem Host (nur `compose.yaml`) |
 
@@ -46,6 +46,12 @@ enger fassen, z. B. `FORWARDED_ALLOW_IPS=172.20.0.0/16`. Läuft der Proxy auf ei
 anderen Rechner mit öffentlicher Adresse, trag genau diese Adresse ein. Nie `*`
 verwenden: Dann kann jeder, der den Server direkt erreicht, eine beliebige Adresse
 vortäuschen.
+
+`compose.yaml` veröffentlicht Port 21114 direkt und setzt deshalb
+`FORWARDED_ALLOW_IPS=127.0.0.1`: Sonst könnte jeder in deinem Netz eine erfundene Adresse
+an der Begrenzung der Fehlversuche vorbeischicken. Steht ein Reverse Proxy davor, trag
+seine Adresse in der `.env` ein. `compose.traefik.yml` veröffentlicht den Port nicht und
+behält den Standard.
 
 ## Schlüssel der Zwei-Faktor-Anmeldung verschlüsseln
 
@@ -85,7 +91,8 @@ Faktor prüft dann der Anbieter. Die normale Anmeldung bleibt erhalten.
 | `RDAPI_OIDC_NAME` | `SSO` | Name auf dem Knopf: „Mit … anmelden“ |
 | `RDAPI_OIDC_ADMIN_GROUP` | – | Mitglieder dieser Gruppe werden bei der Anmeldung Admins |
 | `RDAPI_OIDC_CREATE_USERS` | `true` | bei der ersten Anmeldung ein Konto anlegen; `false` lässt nur bestehende Konten herein |
-| `RDAPI_PUBLIC_URL` | – | öffentliche Adresse, falls sie sich nicht aus der Anfrage ergibt; gilt auch für Passkeys |
+| `RDAPI_OIDC_LINK_BY_USERNAME` | `false` | `true` verknüpft auch ein bestehendes Konto mit gleichem Benutzernamen, nie ein Admin-Konto; nur für Anbieter, bei denen niemand seinen Benutzernamen wählen oder ändern kann |
+| `RDAPI_PUBLIC_URL` | – | öffentliche Adresse, z. B. `https://rd.example.com`; empfohlen mit Passkeys und Anmeldung über einen Anbieter, damit sie nicht von der Adresse in der Anfrage abhängen |
 
 Beim Anbieter trägst du einen vertraulichen Client ein, mit der Rücksprung-Adresse
 `https://<deine Adresse>/oidc/callback`, den Scopes `openid profile email groups`, PKCE mit
@@ -112,8 +119,11 @@ So werden Konten zugeordnet:
 
 - Nach der ersten Anmeldung ist das Konto dauerhaft mit der Person beim Anbieter
   verknüpft, auch wenn sich ihr Name dort ändert.
-- Vorher wird ein bestehendes Konto mit gleichem Benutzernamen verknüpft, oder mit gleicher
-  E-Mail-Adresse, wenn der Anbieter sie bestätigt.
+- Vorher wird ein bestehendes Konto mit gleicher E-Mail-Adresse verknüpft, aber nur, wenn
+  der Anbieter die Adresse bestätigt (`email_verified`). Der Benutzername allein reicht
+  nicht: Bei vielen Anbietern wählt oder ändert man ihn selbst, und wer sich dort `admin`
+  nennt, darf nicht das lokale Admin-Konto bekommen. `RDAPI_OIDC_LINK_BY_USERNAME=true`
+  erlaubt es für Konten, die keine Admins sind.
 - Sonst wird ein neues Konto angelegt (außer bei `RDAPI_OIDC_CREATE_USERS=false`). Es hat
   kein Passwort, das jemand kennt; ein Admin kann unter „Benutzer“ eins setzen.
 - Mitglieder von `RDAPI_OIDC_ADMIN_GROUP` werden Admins. Admin-Rechte werden nie

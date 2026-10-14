@@ -323,3 +323,19 @@ def test_invalid_json(client):
     resp = client.post("/api/ab", headers=headers, content=b"{kaputt")
     assert resp.status_code == 400
     assert resp.json()["error"] == "Invalid JSON."
+
+
+def test_login_does_not_claim_an_unowned_device_with_another_key(client, db):
+    """Ein Gerät, das sich nur ohne Anmeldung meldet, gehört niemandem. Wer seine ID kennt,
+    darf es mit einer anderen Kennung nicht übernehmen (sonst sähe er dessen Verlauf)."""
+    client.post("/api/sysinfo", json={"id": "555666777", "uuid": "a2V5LUE=", "hostname": "Server"})
+    app_login(client, device="555666777")  # schickt die Kennung dXVpZA==
+    owner = db.execute("SELECT user_id FROM devices WHERE id = '555666777'").fetchone()[0]
+    assert owner is None
+
+
+def test_login_claims_an_unowned_device_with_its_own_key(client, db):
+    client.post("/api/sysinfo", json={"id": "555666778", "uuid": "dXVpZA==", "hostname": "PC"})
+    app_login(client, device="555666778")
+    owner = db.execute("SELECT user_id FROM devices WHERE id = '555666778'").fetchone()[0]
+    assert owner == db.execute("SELECT id FROM users WHERE username = 'alice'").fetchone()[0]

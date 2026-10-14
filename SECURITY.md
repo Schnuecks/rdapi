@@ -46,4 +46,7 @@ What is in place:
 Known limit: devices report heartbeat, system information and connections **without** a
 sign-in, because that is how the RustDesk app works. Anyone who can reach `/api/` can
 therefore register made-up devices; this is limited per address and hour, and devices
-without an owner are removed after 30 days.
+without an owner are removed after 30 days. Someone who knows the RustDesk ID of a device
+that has never reported can also register it first with a wrong internal key; the real
+device is then ignored until an admin removes the entry under “Devices” (or 30 days pass).
+Signing in with a device ID never takes over a device whose internal key does not match.

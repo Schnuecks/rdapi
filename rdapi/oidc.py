@@ -223,12 +223,16 @@ def person(claims: dict[str, Any]) -> Person:
 
 
 def user_for(conn: sqlite3.Connection, cfg: Settings, who: Person) -> sqlite3.Row:
-    """Konto zur Person: über die dauerhafte Verknüpfung, sonst über den Benutzernamen oder
-    die bestätigte E-Mail-Adresse (und dann verknüpfen), sonst neu anlegen."""
+    """Konto zur Person: über die dauerhafte Verknüpfung (sub), sonst über die vom Anbieter
+    bestätigte E-Mail-Adresse (und dann verknüpfen), sonst neu anlegen.
+
+    Den Benutzernamen kann man bei vielen Anbietern selbst wählen oder ändern; darüber wird
+    nur mit RDAPI_OIDC_LINK_BY_USERNAME verknüpft, und nie mit einem Admin-Konto."""
     row = conn.execute("SELECT * FROM users WHERE oidc_sub = ?", (who.sub,)).fetchone()
-    if row is None and who.username:
+    if row is None and who.username and cfg.oidc_link_by_username:
         row = conn.execute(
-            "SELECT * FROM users WHERE username = ? AND oidc_sub = ''", (who.username,)
+            "SELECT * FROM users WHERE username = ? AND oidc_sub = '' AND is_admin = 0",
+            (who.username,),
         ).fetchone()
     if row is None and who.email and who.email_verified:
         row = conn.execute(

@@ -2,6 +2,21 @@
 
 ## Unreleased
 
+- **Security: devices without an owner** are no longer taken over by signing in with
+  their ID; the internal key the device reports with must match. Before, a user who knew
+  the ID of an unattended device could see its connection and file history.
+- **Security: single sign-on no longer links accounts by username.** An existing account
+  is linked only by the subject at the provider or by an email address the provider
+  confirms. `RDAPI_OIDC_LINK_BY_USERNAME=true` brings back linking by username, but never
+  for admin accounts. Accounts that were already linked stay linked.
+- **Security: passkey accounts need an authenticator app for the RustDesk app.** The app
+  cannot use passkeys, so an account with a passkey and without two-factor sign-in could
+  sign in to the app with the password alone; it now gets a message to set up two-factor
+  sign-in (or to use single sign-on).
+- `compose.yaml` trusts `X-Forwarded-For` only from the host itself
+  (`FORWARDED_ALLOW_IPS=127.0.0.1`), because it publishes the port directly.
+- GitHub Actions are pinned to commit hashes; the docs recommend `RDAPI_PUBLIC_URL` with
+  passkeys and single sign-on and describe the known limit of pre-registered device IDs.
 - **Code scanning findings resolved:** error messages of passkeys and single sign-on are
   always one of the fixed texts, and the language and theme cookies store only values from
   the built-in lists. No behaviour changes.
