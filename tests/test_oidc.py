@@ -30,7 +30,12 @@ class FakeProvider:
     """Antwortet wie ein Anbieter; `who` bestimmt, wer sich dort anmeldet."""
 
     def __init__(self) -> None:
-        self.who = {"sub": "u-1", "preferred_username": "alice", "email": "alice@example.com"}
+        self.who = {
+            "sub": "u-1",
+            "preferred_username": "alice",
+            "email": "alice@example.com",
+            "email_verified": True,
+        }
         self.nonces: dict[str, str] = {}  # Code beim Anbieter -> Nonce
         self.id_token_changes: dict = {}
         self.last_token_request: dict = {}
@@ -95,7 +100,7 @@ def sso(sso_cfg, provider):
 
     app = create_app(sso_cfg)
     conn = connect(sso_cfg.db_path)
-    create_user(conn, "alice", USER_PW)
+    create_user(conn, "alice", USER_PW, email="alice@example.com")
     conn.close()
     with TestClient(app) as c:
         yield c
@@ -198,7 +203,14 @@ def test_state_works_only_once(sso, provider):
 
 
 def test_admin_rights_are_never_removed(sso, provider, db):
-    provider.who = {"sub": "u-9", "preferred_username": "admin", "groups": []}
+    db.execute("UPDATE users SET email = 'admin@example.com' WHERE username = 'admin'")
+    provider.who = {
+        "sub": "u-9",
+        "preferred_username": "admin",
+        "email": "admin@example.com",
+        "email_verified": True,
+        "groups": [],
+    }
     web_sso_login(sso, provider)
     assert db.execute("SELECT is_admin FROM users WHERE username = 'admin'").fetchone()[0] == 1
     assert db.execute("SELECT oidc_sub FROM users WHERE username = 'admin'").fetchone()[0] == "u-9"
@@ -255,3 +267,34 @@ def test_app_login_can_be_cancelled_and_needs_matching_device(sso, provider):
 
 def test_app_oidc_not_set_up(client):
     assert client.post("/api/oidc/auth", json={"op": "x"}).status_code == 400
+
+
+def test_username_alone_never_takes_over_an_account(sso, provider, db):
+    """Wer sich beim Anbieter „admin“ nennt, bekommt nicht das lokale Admin-Konto."""
+    provider.who = {"sub": "attacker", "preferred_username": "admin"}
+    assert web_sso_login(sso, provider).status_code == 303
+    admin = db.execute("SELECT oidc_sub, is_admin FROM users WHERE username = 'admin'").fetchone()
+    assert tuple(admin) == ("", 1)
+    new = db.execute("SELECT username, is_admin FROM users WHERE oidc_sub = 'attacker'").fetchone()
+    assert new["username"] != "admin" and new["is_admin"] == 0
+
+
+def test_unverified_email_does_not_link(sso, provider, db):
+    provider.who = {"sub": "u-5", "preferred_username": "x", "email": "alice@example.com"}
+    web_sso_login(sso, provider)
+    assert db.execute("SELECT oidc_sub FROM users WHERE username = 'alice'").fetchone()[0] == ""
+
+
+def test_link_by_username_is_optional_and_never_for_admins(sso_cfg, provider, db):
+    from rdapi.security import create_user
+
+    app = create_app(replace(sso_cfg, oidc_link_by_username=True))
+    create_user(db, "dave", USER_PW)
+    with TestClient(app) as c:
+        provider.who = {"sub": "u-6", "preferred_username": "dave"}
+        web_sso_login(c, provider)
+        c.cookies.clear()
+        provider.who = {"sub": "u-7", "preferred_username": "admin"}
+        web_sso_login(c, provider)
+    assert db.execute("SELECT oidc_sub FROM users WHERE username = 'dave'").fetchone()[0] == "u-6"
+    assert db.execute("SELECT oidc_sub FROM users WHERE username = 'admin'").fetchone()[0] == ""

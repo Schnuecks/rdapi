@@ -16,7 +16,7 @@ from typing import Any
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import JSONResponse, PlainTextResponse, Response
 
-from . import oidc, sharing
+from . import oidc, passkeys, sharing
 from .config import Settings
 from .db import now, transaction
 from .deps import (
@@ -52,6 +52,11 @@ MAX_BODY = 2 * 1024 * 1024
 MAX_PEER_JSON = 16 * 1024
 MAX_SYSINFO_JSON = 16 * 1024
 MAX_AB_PEERS = 5000
+PASSKEY_NEEDS_TOTP = (
+    "This account uses a passkey, which the RustDesk app cannot use. To sign in to the app,"
+    " set up two-factor sign-in with an authenticator app in the web interface"
+    " (Account) or use single sign-on."
+)
 
 
 class ApiError(Exception):
@@ -166,8 +171,9 @@ def device_matches(row: sqlite3.Row, device_uuid: str) -> bool:
 
 def _claim_device(conn: sqlite3.Connection, user_id: int, data: dict[str, Any]) -> None:
     """Das Gerät, auf dem man sich anmeldet, gehört ab jetzt diesem Benutzer, aber nur,
-    wenn es noch niemandem gehört oder seine Kennung passt. Sonst könnte man mit einer
-    fremden ID dessen Verbindungsverlauf übernehmen."""
+    wenn seine Kennung passt (oder noch keine gespeichert ist). Sonst könnte man mit einer
+    fremden ID dessen Verbindungs- und Dateiverlauf übernehmen – auch bei Geräten, die
+    noch niemandem gehören, weil sie sich nur ohne Anmeldung melden."""
     device_id = text(data.get("id"), 64)
     device_uuid = text(data.get("uuid"), 128)
     if not device_id:
@@ -187,7 +193,9 @@ def _claim_device(conn: sqlite3.Connection, user_id: int, data: dict[str, Any]) 
                 now(),
             ),
         )
-    elif row["user_id"] is None or (device_uuid and row["uuid"] == device_uuid):
+    elif (row["user_id"] is None and device_matches(row, device_uuid)) or (
+        device_uuid and row["uuid"] == device_uuid
+    ):
         conn.execute(
             "UPDATE devices SET user_id = ?,"
             " uuid = CASE WHEN uuid = '' THEN ? ELSE uuid END WHERE id = ?",
@@ -269,9 +277,16 @@ async def login(
     password = password if isinstance(password, str) else ""
     with transaction(conn):
         user = authenticate(conn, username, password) if username and password else None
+        passkey_only = False
         if user is None:
             log_login(conn, username, None, "app", ip, False, client_info)
             result = None
+        elif not user["totp_enabled"] and passkeys.count(conn, user["id"]):
+            # Im Web schützt der Passkey als zweiter Faktor; die App kann keine Passkeys.
+            # Ohne Authenticator-App wäre die App nur durch das Passwort geschützt.
+            log_login(conn, username, user["id"], "app", ip, False, "passkey account: 2FA needed")
+            result = None
+            passkey_only = True
         elif user["totp_enabled"]:
             # Passwort stimmt; die App fragt jetzt nach dem Code (Antworttyp der App).
             result = {
@@ -287,6 +302,8 @@ async def login(
     if user is None:
         lim.failure(ip, username)
         raise ApiError(401, "Wrong username or password.")
+    if passkey_only:
+        raise ApiError(403, PASSKEY_NEEDS_TOTP)
     if result["type"] == "access_token":
         lim.success(ip, username)
     return result

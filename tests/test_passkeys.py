@@ -244,11 +244,22 @@ def test_removing_last_passkey_turns_second_factor_off(client, db):
     assert resp.status_code == 303
 
 
-def test_app_login_is_unaffected_by_passkeys(client):
+def test_app_login_needs_authenticator_when_passkeys_are_used(client, db):
+    """Im Web ist der Passkey zweiter Faktor; die App kann keine Passkeys. Ohne
+    Authenticator-App gäbe es dort nur das Passwort, deshalb wird abgelehnt."""
     csrf = web_login(client, "alice", USER_PW)
     add_passkey(client, csrf)
     resp = client.post("/api/login", json={"username": "alice", "password": USER_PW})
-    assert resp.json()["type"] == "access_token"
+    assert resp.status_code == 403
+    assert "authenticator app" in resp.json()["error"]
+    assert db.execute("SELECT COUNT(*) FROM tokens WHERE kind = 'app'").fetchone()[0] == 0
+    # Falsches Passwort bleibt ein normaler Fehlversuch und verrät nichts über Passkeys.
+    wrong = client.post("/api/login", json={"username": "alice", "password": "falsch-falsch"})
+    assert wrong.status_code == 401
+    # Mit Authenticator-App fragt die App wie gewohnt nach dem Code.
+    db.execute("UPDATE users SET totp_enabled = 1 WHERE username = 'alice'")
+    resp = client.post("/api/login", json={"username": "alice", "password": USER_PW})
+    assert resp.json()["type"] == "email_check"
 
 
 def test_admin_reset_removes_passkeys(client, db):

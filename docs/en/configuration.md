@@ -28,7 +28,7 @@ All settings are optional. With `compose.yaml`, put them into a `.env` next to i
 | `RDAPI_BACKUP_KEEP` | `7` | number of daily backups to keep; `0` turns daily backups off |
 | `RDAPI_BACKUP_DIR` | `/data/backups` | folder for the backups |
 | `RDAPI_DB_PATH` | `/data/rdapi.sqlite3` | location of the database |
-| `FORWARDED_ALLOW_IPS` | local and private networks | addresses of reverse proxies whose `X-Forwarded-For` is trusted, see below |
+| `FORWARDED_ALLOW_IPS` | local and private networks (`127.0.0.1` in `compose.yaml`) | addresses of reverse proxies whose `X-Forwarded-For` is trusted, see below |
 | `PUID`, `PGID` | `1000` | user and group the container runs as |
 | `PORT` | `21114` | port on the host (`compose.yaml` only) |
 
@@ -45,6 +45,12 @@ reverse proxy in the same Docker network. If you know the proxy's address, you c
 it down, e.g. `FORWARDED_ALLOW_IPS=172.20.0.0/16`. If your proxy runs on another host
 with a public address, enter exactly that address. Never use `*`: then anyone who
 reaches the server directly can pretend to have any address.
+
+`compose.yaml` publishes port 21114 directly and therefore sets
+`FORWARDED_ALLOW_IPS=127.0.0.1`: otherwise anyone in your network could send a made-up
+address past the limit on failed sign-ins. If you put a reverse proxy in front of it,
+set its address in `.env`. `compose.traefik.yml` does not publish the port and keeps
+the default.
 
 ## Encrypting two-factor keys
 
@@ -83,7 +89,8 @@ password and the second factor. The normal sign-in stays available.
 | `RDAPI_OIDC_NAME` | `SSO` | name on the button: “Sign in with …” |
 | `RDAPI_OIDC_ADMIN_GROUP` | – | members of this group become admins on sign-in |
 | `RDAPI_OIDC_CREATE_USERS` | `true` | create an account on the first sign-in; `false` only lets in existing accounts |
-| `RDAPI_PUBLIC_URL` | – | public address, if it cannot be taken from the request; also used for passkeys |
+| `RDAPI_OIDC_LINK_BY_USERNAME` | `false` | `true` also links an existing account with the same username, never an admin account; only for providers where nobody can choose or change their username |
+| `RDAPI_PUBLIC_URL` | – | public address, e.g. `https://rd.example.com`; recommended with passkeys and single sign-on, so they do not depend on the address the request names |
 
 At the provider, register a confidential client with the redirect URI
 `https://<your address>/oidc/callback`, the scopes `openid profile email groups`, PKCE
@@ -110,8 +117,11 @@ How accounts are matched:
 
 - After the first sign-in, the account is linked to the person at the provider for good,
   even if their name changes there.
-- Before that, an existing account with the same username, or with the same email address
-  if the provider confirms it, is linked.
+- Before that, an existing account with the same email address is linked, but only if the
+  provider confirms the address (`email_verified`). The username alone does not link:
+  at many providers people choose or change it themselves, and whoever calls themselves
+  `admin` there must not get the local admin account. `RDAPI_OIDC_LINK_BY_USERNAME=true`
+  allows it for accounts that are not admins.
 - Otherwise a new account is created (unless `RDAPI_OIDC_CREATE_USERS=false`). It has no
   password anyone knows; an admin can set one under “Users”.
 - Members of `RDAPI_OIDC_ADMIN_GROUP` become admins. Admin rights are never taken away

@@ -106,8 +106,10 @@ can tell them apart later.
 
 Passkeys need HTTPS and belong to the address they were created at, e.g.
 `rd.example.com`; after moving to another address, add them again. The RustDesk app cannot
-use passkeys; it keeps signing in with password (and code). With a provider such as
-Authelia, passkeys set up there also work for the app through single sign-on.
+use passkeys. So that the app is not protected by the password alone, an account with a
+passkey can only sign in to the app with password **and** code from an authenticator app:
+set up two-factor sign-in as well. With a provider such as Authelia, passkeys set up
+there also work for the app through single sign-on.
 
 An admin removes all passkeys and the code of a user under “Users” → “Turn off two-factor
 sign-in”, or with `rdapi.cli reset-2fa`.

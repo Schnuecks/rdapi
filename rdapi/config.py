@@ -63,6 +63,7 @@ class Settings:
     oidc_name: str = "SSO"
     oidc_admin_group: str = ""
     oidc_create_users: bool = True
+    oidc_link_by_username: bool = False
     # Öffentliche Adresse, falls sie sich nicht aus der Anfrage ergibt (Rücksprung-URL).
     public_url: str = ""
     # Schlüssel zum Verschlüsseln der TOTP-Geheimnisse in der Datenbank (optional).
@@ -100,6 +101,8 @@ class Settings:
             oidc_admin_group=_env("OIDC_ADMIN_GROUP"),
             oidc_create_users=_env("OIDC_CREATE_USERS", "true").lower()
             not in {"0", "false", "no", "off"},
+            oidc_link_by_username=_env("OIDC_LINK_BY_USERNAME", "false").lower()
+            in ("1", "true", "yes", "on"),
             public_url=_env("PUBLIC_URL").rstrip("/"),
             secret_key=_read_secret("SECRET_KEY"),
             device_requests_per_minute=_env_int("DEVICE_REQUESTS_PER_MINUTE", 600),

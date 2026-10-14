@@ -111,9 +111,11 @@ kannst.
 
 Passkeys brauchen HTTPS und gehören zu der Adresse, unter der sie angelegt wurden, z. B.
 `rd.example.com`; nach einem Umzug auf eine andere Adresse legst du sie neu an. Die
-RustDesk-App kann keine Passkeys nutzen; sie meldet sich weiter mit Passwort (und Code)
-an. Mit einem Anbieter wie Authelia funktionieren dort eingerichtete Passkeys über die
-Anmeldung beim Anbieter auch für die App.
+RustDesk-App kann keine Passkeys nutzen. Damit die App nicht allein durch das Passwort
+geschützt ist, meldet sich ein Konto mit Passkey in der App nur mit Passwort **und** Code
+aus einer Authenticator-App an: Richte also auch die Zwei-Faktor-Anmeldung ein. Mit einem
+Anbieter wie Authelia funktionieren dort eingerichtete Passkeys über die Anmeldung beim
+Anbieter auch für die App.
 
 Ein Admin entfernt alle Passkeys und den Code eines Benutzers unter „Benutzer“ →
 „Zwei-Faktor-Anmeldung ausschalten“, oder mit `rdapi.cli reset-2fa`.

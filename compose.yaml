@@ -16,6 +16,9 @@ services:
         required: false
     environment:
       - TZ=${TZ:-Europe/Berlin}
+      # Port 21114 is published directly, so only trust X-Forwarded-For from this host.
+      # With a reverse proxy in front, set the proxy's address (see docs/en/configuration.md).
+      - FORWARDED_ALLOW_IPS=${FORWARDED_ALLOW_IPS:-127.0.0.1}
     ports:
       - "${PORT:-21114}:21114"
     volumes:
