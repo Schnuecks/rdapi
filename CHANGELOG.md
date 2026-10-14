@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.3
 
 - **Security: devices without an owner** are no longer taken over by signing in with
   their ID; the internal key the device reports with must match. Before, a user who knew
