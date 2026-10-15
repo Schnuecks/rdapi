@@ -9,6 +9,8 @@
   <a href="https://github.com/Schnuecks/rdapi/pkgs/container/rdapi"><img src="https://img.shields.io/badge/Docker-ready-2496ED?logo=docker&logoColor=white" alt="Docker ready"></a>
   <img src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-E4572E" alt="Platform amd64 | arm64">
   <img src="https://img.shields.io/badge/RustDesk_app-1.5-E4572E" alt="RustDesk app 1.5">
+  <a href="https://github.com/Schnuecks/rdapi/actions/workflows/ci.yml"><img src="https://github.com/Schnuecks/rdapi/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Schnuecks/rdapi/actions/workflows/zap.yml"><img src="https://github.com/Schnuecks/rdapi/actions/workflows/zap.yml/badge.svg" alt="ZAP scan"></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-4C9A2A" alt="License AGPL-3.0"></a>
   <img src="https://img.shields.io/badge/status-beta-E4572E" alt="Status: Beta">
   <img src="https://img.shields.io/badge/maintained-yes-4C9A2A" alt="Maintained">
@@ -95,6 +97,24 @@ siehe [Installation](docs/de/installation.md).
   Übersetzungen, Releases
 
 Was sich in jeder Version geändert hat, steht im [CHANGELOG](CHANGELOG.md) (englisch).
+
+## Sicherheit
+
+RDAPI verwaltet den Zugang zu deinen Fernwartungs-Geräten, deshalb bekommt Sicherheit hier
+besondere Aufmerksamkeit:
+
+- **Eingebaut:** Passwörter mit Argon2id, Tokens nur als Hash gespeichert,
+  Zwei-Faktor-Anmeldung, Passkeys, Begrenzung fehlgeschlagener Anmeldungen je Adresse und je
+  Benutzer, CSRF-Tokens und Herkunftsprüfung bei Formularen, eine strikte
+  Content-Security-Policy und ein schreibgeschützter Container ohne Root.
+- **Bei jeder Änderung geprüft:** Tests, Trivy-Scan des Images, OWASP-ZAP-Baseline-Scan,
+  Dependabot. GitHub Actions sind auf Commit-Hashes festgelegt.
+- **Überprüft:** Vor der öffentlichen Beta hat ein KI-gestützter Sicherheits-Review Anmeldung,
+  Gerätezuordnung, Single Sign-on und die App-Schnittstelle durchgesehen. Jeder Fund wurde mit
+  einem Test nachgestellt, behoben und erneut geprüft – nachzulesen bei den Versionen 0.10.x im
+  [Changelog](CHANGELOG.md).
+
+Sicherheitslücken bitte vertraulich melden, siehe [SECURITY.md](SECURITY.md).
 
 ## Wie es entsteht
 
