@@ -32,6 +32,8 @@ services:
     tmpfs: [/tmp]
     environment:
       <<: *env
+      # Address of the login page in front of the web interface (e.g. Authelia), see .env
+      RDAPI_AUTH_PORTAL_URL: ${AUTH_PORTAL_URL:-}
     volumes:
       - ./data:/data
     healthcheck:

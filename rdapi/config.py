@@ -66,6 +66,7 @@ class Settings:
     oidc_link_by_username: bool = False
     # Öffentliche Adresse, falls sie sich nicht aus der Anfrage ergibt (Rücksprung-URL).
     public_url: str = ""
+    auth_portal_urls: tuple[str, ...] = ()
     # Schlüssel zum Verschlüsseln der TOTP-Geheimnisse in der Datenbank (optional).
     secret_key: str = ""
     # Anfragen je Adresse und Minute an die Gerätemeldungen (Heartbeat, Sysinfo, Verlauf).
@@ -104,6 +105,9 @@ class Settings:
             oidc_link_by_username=_env("OIDC_LINK_BY_USERNAME", "false").lower()
             in ("1", "true", "yes", "on"),
             public_url=_env("PUBLIC_URL").rstrip("/"),
+            auth_portal_urls=tuple(
+                u.strip() for u in _env("AUTH_PORTAL_URL").split(",") if u.strip()
+            ),
             secret_key=_read_secret("SECRET_KEY"),
             device_requests_per_minute=_env_int("DEVICE_REQUESTS_PER_MINUTE", 600),
         )

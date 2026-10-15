@@ -90,6 +90,7 @@ password and the second factor. The normal sign-in stays available.
 | `RDAPI_OIDC_ADMIN_GROUP` | – | members of this group become admins on sign-in |
 | `RDAPI_OIDC_CREATE_USERS` | `true` | create an account on the first sign-in; `false` only lets in existing accounts |
 | `RDAPI_OIDC_LINK_BY_USERNAME` | `false` | `true` also links an existing account with the same username, never an admin account; only for providers where nobody can choose or change their username |
+| `RDAPI_AUTH_PORTAL_URL` | – | address of the login page of a reverse proxy in front of the web interface, e.g. `https://auth.example.com`; several separated by commas. Forms may only lead there and to this server, see below |
 | `RDAPI_PUBLIC_URL` | – | public address, e.g. `https://rd.example.com`; recommended with passkeys and single sign-on, so they do not depend on the address the request names |
 
 At the provider, register a confidential client with the redirect URI

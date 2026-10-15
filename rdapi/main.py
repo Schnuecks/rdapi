@@ -36,22 +36,41 @@ log = logging.getLogger("rdapi")
 PRUNE_INTERVAL = 6 * 3600
 
 # Inline erlaubt ist nur das kleine Skript im Kopf von base.html (Hash) und style-Attribute
-# für Tag-Farben; alles andere kommt von hier selbst. Formulare dürfen auch auf HTTPS-Adressen
-# weiterleiten: Hinter einem Reverse Proxy mit Anmeldeseite (z. B. Authelia) leitet der Proxy
-# ein Formular zur Anmeldeseite um, wenn dessen Sitzung abgelaufen ist. Mit nur 'self'
-# blockiert der Browser das ganze Absenden still (z. B. „Abmelden passiert nichts“).
+# für Tag-Farben; alles andere kommt von hier selbst. Formulare gehen nur an diese Seite und an
+# die Anmeldeseite eines Reverse Proxys (RDAPI_AUTH_PORTAL_URL) bzw. des Anbieters für die
+# Anmeldung (RDAPI_OIDC_ISSUER): Ist die Sitzung beim Proxy abgelaufen, leitet er ein
+# Formular dorthin um. Fehlt die Adresse, blockiert der Browser das ganze Absenden still
+# (z. B. „Abmelden passiert nichts“).
 CSP = (
     "default-src 'self'; "
     "script-src 'self' 'sha256-{script_hash}'; "
     "style-src 'self' 'unsafe-inline'; "
     "img-src 'self' data:; "
-    "frame-ancestors 'none'; base-uri 'none'; form-action 'self' https:; object-src 'none'"
+    "frame-ancestors 'none'; base-uri 'none'; form-action {form_action}; object-src 'none'"
 )
 INLINE_SCRIPT = 'document.documentElement.classList.add("js")'
+SCRIPT_HASH = base64.b64encode(hashlib.sha256(INLINE_SCRIPT.encode()).digest()).decode()
+
+
+def form_action(cfg: Settings) -> str:
+    """'self' plus die Herkunft (Schema und Host) der Anmeldeseiten, nur HTTPS (oder localhost)."""
+    sources = ["'self'"]
+    for url in (*cfg.auth_portal_urls, cfg.oidc_issuer):
+        parts = urlsplit(url)
+        local = parts.hostname in ("localhost", "127.0.0.1")
+        if parts.netloc and (parts.scheme == "https" or (parts.scheme == "http" and local)):
+            origin = f"{parts.scheme}://{parts.netloc}".lower()
+            if origin not in sources:
+                sources.append(origin)
+    return " ".join(sources)
+
+
+def security_headers(cfg: Settings) -> dict[str, str]:
+    csp = CSP.format(script_hash=SCRIPT_HASH, form_action=form_action(cfg))
+    return {"Content-Security-Policy": csp, **SECURITY_HEADERS}
+
+
 SECURITY_HEADERS = {
-    "Content-Security-Policy": CSP.format(
-        script_hash=base64.b64encode(hashlib.sha256(INLINE_SCRIPT.encode()).digest()).decode()
-    ),
     "X-Frame-Options": "DENY",
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
@@ -233,6 +252,7 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
     bootstrap_admin(cfg)
     announce_setup(cfg)
     web.setup_filters(cfg.timezone)
+    headers = security_headers(cfg)
 
     @contextlib.asynccontextmanager
     async def lifespan(_: FastAPI) -> AsyncIterator[None]:
@@ -292,7 +312,7 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
             response = PlainTextResponse("Cross-site request blocked.", status_code=403)
         else:
             response = await call_next(request)
-        for name, value in SECURITY_HEADERS.items():
+        for name, value in headers.items():
             response.headers.setdefault(name, value)
         if response.headers.get("content-type", "").startswith(("text/html", "application/json")):
             # Seiten und Antworten mit persönlichen Daten nicht zwischenspeichern.

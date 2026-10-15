@@ -92,6 +92,7 @@ Faktor prüft dann der Anbieter. Die normale Anmeldung bleibt erhalten.
 | `RDAPI_OIDC_ADMIN_GROUP` | – | Mitglieder dieser Gruppe werden bei der Anmeldung Admins |
 | `RDAPI_OIDC_CREATE_USERS` | `true` | bei der ersten Anmeldung ein Konto anlegen; `false` lässt nur bestehende Konten herein |
 | `RDAPI_OIDC_LINK_BY_USERNAME` | `false` | `true` verknüpft auch ein bestehendes Konto mit gleichem Benutzernamen, nie ein Admin-Konto; nur für Anbieter, bei denen niemand seinen Benutzernamen wählen oder ändern kann |
+| `RDAPI_AUTH_PORTAL_URL` | – | Adresse der Anmeldeseite eines Reverse Proxys vor der Weboberfläche, z. B. `https://auth.example.com`; mehrere durch Kommas getrennt. Formulare dürfen nur dorthin und zu diesem Server führen, siehe unten |
 | `RDAPI_PUBLIC_URL` | – | öffentliche Adresse, z. B. `https://rd.example.com`; empfohlen mit Passkeys und Anmeldung über einen Anbieter, damit sie nicht von der Adresse in der Anfrage abhängen |
 
 Beim Anbieter trägst du einen vertraulichen Client ein, mit der Rücksprung-Adresse

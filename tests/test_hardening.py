@@ -177,10 +177,27 @@ def test_oidc_issuer_must_use_https(cfg):
     assert checked_oidc(replace(cfg, oidc_issuer="http://localhost:9091")).oidc_issuer
 
 
-def test_forms_may_redirect_to_a_proxy_login_page(client):
-    # Hinter einer Anmeldeseite (z. B. Authelia) leitet der Proxy Formulare dorthin um.
+def test_forms_go_only_to_this_site_by_default(client):
     csp = client.get("/login").headers["content-security-policy"]
-    assert "form-action 'self' https:;" in csp
+    assert "form-action 'self';" in csp
+
+
+def test_forms_may_redirect_to_the_proxy_login_page(cfg):
+    # Hinter einer Anmeldeseite (z. B. Authelia) leitet der Proxy Formulare dorthin um.
+    from rdapi.main import form_action
+
+    portal = replace(cfg, auth_portal_urls=("https://Auth.example.com/login?x=1",))
+    assert form_action(portal) == "'self' https://auth.example.com"
+    sso = replace(portal, oidc_issuer="https://sso.example.com/realms/home")
+    assert form_action(sso) == "'self' https://auth.example.com https://sso.example.com"
+    same = replace(portal, oidc_issuer="https://auth.example.com")
+    assert form_action(same) == "'self' https://auth.example.com"
+    # Nur HTTPS (außer localhost); kaputte Werte werden ignoriert.
+    odd = replace(cfg, auth_portal_urls=("http://auth.example.com", "auth.example.com", "*"))
+    assert form_action(odd) == "'self'"
+    with TestClient(create_app(portal)) as c:
+        csp = c.get("/login").headers["content-security-policy"]
+        assert "form-action 'self' https://auth.example.com;" in csp
 
 
 def test_get_logout_offers_sign_out_or_goes_to_login(client):

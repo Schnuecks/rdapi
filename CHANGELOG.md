@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.5
+
+- **Forms may only lead to this server and the login page:** the Content Security Policy
+  allowed forms to go to any HTTPS address (`form-action 'self' https:`), so that a reverse
+  proxy could send them to its login page. Now only this server, the address in the new
+  setting `RDAPI_AUTH_PORTAL_URL` and the single sign-on provider (`RDAPI_OIDC_ISSUER`) are
+  allowed. **If a login page such as Authelia is in front of the web interface and single
+  sign-on is not set up, set `RDAPI_AUTH_PORTAL_URL`**, otherwise signing out after the
+  proxy session has expired seems to do nothing.
+
 ## 0.10.4
 
 - **Forms only from this site:** sign-in, setup, language and all other forms of the web

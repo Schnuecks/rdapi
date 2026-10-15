@@ -77,6 +77,15 @@ die Pfade unterschiedlichen Schutz:
 Die Weboberfläche hat eine eigene Anmeldung mit denselben Zugangsdaten wie die App. Sie
 bleibt also geschützt, auch wenn eine Regel im Proxy einmal nicht greift.
 
+Steht eine Anmeldeseite vor der Weboberfläche, trag ihre Adresse als
+`RDAPI_AUTH_PORTAL_URL` ein, z. B. `https://auth.example.com`. Formulare der Weboberfläche
+dürfen nur zu diesem Server und zu dieser Adresse führen (Content Security Policy
+`form-action`). Ist die Sitzung beim Proxy abgelaufen, schickt er ein Formular wie
+„Abmelden“ zu seiner Anmeldeseite; ohne die Adresse blockiert der Browser das still, und
+der Knopf scheint nichts zu tun. Der Anbieter aus `RDAPI_OIDC_ISSUER` ist automatisch
+erlaubt; mit Authelia als Anmeldeseite und Anmeldung über einen Anbieter braucht es also
+nichts weiter.
+
 `compose.traefik.yml` ist ein fertiger Stack für Traefik mit diesen drei Routern:
 
 ```bash

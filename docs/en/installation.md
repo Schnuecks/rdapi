@@ -76,6 +76,14 @@ protection:
 The web interface has its own sign-in with the same credentials as the app, so it stays
 protected even if a proxy rule ever fails to apply.
 
+With a login page in front of the web interface, set its address as
+`RDAPI_AUTH_PORTAL_URL`, e.g. `https://auth.example.com`. Forms of the web interface may
+only lead to this server and to that address (Content Security Policy `form-action`).
+When the proxy's session has expired, it sends a form such as “Sign out” to its login page;
+without the address the browser blocks that silently and the button seems to do nothing.
+The provider of `RDAPI_OIDC_ISSUER` is allowed automatically, so with Authelia as both
+login page and single sign-on nothing else is needed.
+
 `compose.traefik.yml` is a ready-made stack for Traefik with these three routers:
 
 ```bash
