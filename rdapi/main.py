@@ -13,7 +13,7 @@ from pathlib import Path
 from urllib.parse import urlsplit
 
 from fastapi import FastAPI, Request
-from fastapi.responses import JSONResponse, RedirectResponse
+from fastapi.responses import JSONResponse, PlainTextResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
@@ -56,7 +56,37 @@ SECURITY_HEADERS = {
     "X-Content-Type-Options": "nosniff",
     "Referrer-Policy": "same-origin",
     "Permissions-Policy": "camera=(), microphone=(), geolocation=()",
+    # Alles (Skripte, Schriften, Bilder) kommt von hier; fremde Seiten bekommen weder ein
+    # Fenster-Handle noch können sie Inhalte einbetten.
+    "Cross-Origin-Opener-Policy": "same-origin",
+    "Cross-Origin-Resource-Policy": "same-origin",
+    "Cross-Origin-Embedder-Policy": "require-corp",
 }
+SAFE_METHODS = {"GET", "HEAD", "OPTIONS"}
+
+
+def same_origin(request: Request, public_url: str = "") -> bool:
+    """Ob ein Formular von dieser Seite kommt (Schutz vor Login-CSRF).
+
+    Browser schicken Sec-Fetch-Site mit; ältere stattdessen Origin bzw. Referer. Fehlt beides,
+    ist es kein Browser (z. B. curl) und damit kein CSRF-Fall."""
+    site = request.headers.get("sec-fetch-site")
+    if site:
+        return site in ("same-origin", "none")
+    source = request.headers.get("origin") or request.headers.get("referer")
+    if not source:
+        return True
+    if source == "null":
+        return False  # Sandbox, Datei oder Weiterleitung von fremder Seite
+    parts = urlsplit(source)
+    if not parts.netloc:
+        return False
+    netloc = parts.netloc.lower()
+    if public_url and netloc == urlsplit(public_url).netloc.lower():
+        return True
+    # Hinter einem Reverse Proxy zählt der vom Proxy weitergereichte Host.
+    host = request.headers.get("x-forwarded-host") or request.headers.get("host") or ""
+    return netloc == host.split(",")[0].strip().lower()
 
 
 HSTS = "max-age=31536000"
@@ -252,7 +282,16 @@ def create_app(cfg: Settings | None = None) -> FastAPI:
                 request.cookies.get(i18n.LANG_COOKIE), request.headers.get("accept-language")
             )
         )
-        response = await call_next(request)
+        # Formulare der Weboberfläche nur von dieser Seite. Die RustDesk-App (/api/) schickt
+        # keinen Origin und ist kein Browser, für sie gilt das nicht.
+        if (
+            request.method not in SAFE_METHODS
+            and not request.url.path.startswith("/api/")
+            and not same_origin(request, cfg.public_url)
+        ):
+            response = PlainTextResponse("Cross-site request blocked.", status_code=403)
+        else:
+            response = await call_next(request)
         for name, value in SECURITY_HEADERS.items():
             response.headers.setdefault(name, value)
         if response.headers.get("content-type", "").startswith(("text/html", "application/json")):

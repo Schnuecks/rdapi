@@ -199,3 +199,70 @@ def test_get_on_form_only_address_goes_home(client):
     resp = client.get("/account/password", follow_redirects=False)
     assert resp.status_code == 303 and resp.headers["location"] == "/"
     assert client.get("/api/login", follow_redirects=False).status_code == 405
+
+
+def test_forms_from_other_sites_are_blocked(client):
+    """Login-CSRF: eine fremde Seite darf niemanden in ein Konto einloggen."""
+    form = {"username": "alice", "password": USER_PW}
+    cross = client.post(
+        "/login", data=form, headers={"Sec-Fetch-Site": "cross-site"}, follow_redirects=False
+    )
+    assert cross.status_code == 403
+    evil = client.post(
+        "/login", data=form, headers={"Origin": "https://evil.example"}, follow_redirects=False
+    )
+    assert evil.status_code == 403
+    assert (
+        client.post(
+            "/appearance", data={"theme": "dark"}, headers={"Sec-Fetch-Site": "same-site"}
+        ).status_code
+        == 403
+    )
+    same = client.post(
+        "/login", data=form, headers={"Sec-Fetch-Site": "same-origin"}, follow_redirects=False
+    )
+    assert same.status_code == 303
+    own = client.post(
+        "/login",
+        data=form,
+        headers={"Origin": "http://testserver"},
+        follow_redirects=False,
+    )
+    assert own.status_code == 303
+
+
+def test_origin_check_follows_the_proxy_host(client):
+    form = {"username": "alice", "password": USER_PW}
+    resp = client.post(
+        "/login",
+        data=form,
+        headers={"Origin": "https://rd.example.com", "X-Forwarded-Host": "rd.example.com"},
+        follow_redirects=False,
+    )
+    assert resp.status_code == 303
+
+
+def test_app_api_needs_no_origin(client):
+    resp = client.post(
+        "/api/login",
+        json={"username": "alice", "password": USER_PW},
+        headers={"Sec-Fetch-Site": "cross-site"},
+    )
+    assert resp.status_code == 200
+    assert (
+        client.post("/api/login", json={"username": "alice", "password": USER_PW}).json()["type"]
+        == "access_token"
+    )
+
+
+def test_cross_origin_isolation_headers(client):
+    headers = client.get("/login").headers
+    assert headers["cross-origin-opener-policy"] == "same-origin"
+    assert headers["cross-origin-resource-policy"] == "same-origin"
+    assert headers["cross-origin-embedder-policy"] == "require-corp"
+
+
+def test_appearance_cookies_are_http_only(client):
+    resp = client.post("/appearance", data={"theme": "dark", "lang": "de"}, follow_redirects=False)
+    cookies = resp.headers.get_list("set-cookie")
+    assert len(cookies) == 2 and all("httponly" in c.lower() for c in cookies)

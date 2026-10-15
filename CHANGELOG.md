@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.10.4
+
+- **Forms only from this site:** sign-in, setup, language and all other forms of the web
+  interface reject requests that another website sends (checked with `Sec-Fetch-Site`, or
+  `Origin`/`Referer` behind the reverse proxy's host). This prevents signing a visitor into
+  someone else's account. The app API (`/api/`) is not affected.
+- New headers `Cross-Origin-Opener-Policy`, `Cross-Origin-Resource-Policy` and
+  `Cross-Origin-Embedder-Policy`; the language and theme cookies are `HttpOnly`.
+- ZAP baseline scan: rules for its false positives in `.zap/rules.tsv`.
+
 ## 0.10.3
 
 - **Security: devices without an owner** are no longer taken over by signing in with
