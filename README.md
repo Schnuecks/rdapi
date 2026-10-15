@@ -10,6 +10,8 @@
   <img src="https://img.shields.io/badge/platform-amd64%20%7C%20arm64-E4572E" alt="Platform amd64 | arm64">
   <img src="https://img.shields.io/badge/RustDesk_app-1.5-E4572E" alt="RustDesk app 1.5">
   <a href="LICENSE"><img src="https://img.shields.io/badge/license-AGPL--3.0-4C9A2A" alt="License AGPL-3.0"></a>
+  <a href="https://github.com/Schnuecks/rdapi/actions/workflows/ci.yml"><img src="https://github.com/Schnuecks/rdapi/actions/workflows/ci.yml/badge.svg" alt="CI"></a>
+  <a href="https://github.com/Schnuecks/rdapi/actions/workflows/zap.yml"><img src="https://github.com/Schnuecks/rdapi/actions/workflows/zap.yml/badge.svg" alt="ZAP scan"></a>
   <img src="https://img.shields.io/badge/status-beta-E4572E" alt="Status: beta">
   <img src="https://img.shields.io/badge/maintained-yes-4C9A2A" alt="Maintained">
 </p>
@@ -90,6 +92,21 @@ For use over the internet, put the server behind a reverse proxy with HTTPS; see
   translations, releases
 
 What changed in each version is listed in the [CHANGELOG](CHANGELOG.md).
+
+## Security
+
+RDAPI holds the keys to your remote desktop, so security gets extra attention:
+
+- **Built in:** Argon2id passwords, tokens stored only as hashes, two-factor sign-in, passkeys,
+  per-address and per-user limits on failed sign-ins, CSRF tokens and an origin check on forms,
+  a strict Content Security Policy, and a read-only container without root.
+- **Checked on every change:** test suite, Trivy scan of the image, OWASP ZAP baseline scan,
+  Dependabot. GitHub Actions are pinned to commit hashes.
+- **Reviewed:** before the public beta, an AI-assisted security review went through sign-in,
+  device ownership, single sign-on and the app API. Every finding was reproduced with a test,
+  fixed and re-tested – see versions 0.10.x in the [changelog](CHANGELOG.md).
+
+Please report vulnerabilities privately, see [SECURITY.md](SECURITY.md).
 
 ## How it's built
 
