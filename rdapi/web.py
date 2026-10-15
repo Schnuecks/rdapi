@@ -570,6 +570,8 @@ def oidc_callback(
         request.cookies.get(OIDC_COOKIE, ""), state
     ):
         return _login_error(request, oidc.EXPIRED)
+    if flow["kind"] == "web" and flow["user_id"] is not None:
+        return _finish_link(request, conn, cfg, flow, code, error)
     try:
         if error or not code:
             raise oidc.OidcError(oidc.FAILED)
@@ -596,6 +598,72 @@ def oidc_callback(
     return render(
         request, "oidc_confirm.html", None, flow=flow, account=user, confirm=confirm, done=False
     )
+
+
+def _finish_link(
+    request: Request,
+    conn: sqlite3.Connection,
+    cfg: Settings,
+    flow: sqlite3.Row,
+    code: str,
+    error: str,
+) -> Response:
+    """Rücksprung nach „Mit … verknüpfen“ auf der Kontoseite. Der Ablauf gehört zu dem
+    Konto, das ihn mit Sitzung und CSRF-Token gestartet hat, und zu diesem Browser (Cookie)."""
+    ip = client_ip(request)
+    user = conn.execute(
+        "SELECT * FROM users WHERE id = ? AND enabled = 1", (flow["user_id"],)
+    ).fetchone()
+    problem = None
+    try:
+        if error or not code or user is None:
+            raise oidc.OidcError(oidc.FAILED)
+        who = oidc.person(oidc.exchange(cfg, str(request.base_url), flow, code))
+        with transaction(conn):
+            oidc.link(conn, user["id"], who)
+            log_activity(conn, user, "sso_linked", user["username"], f"subject {who.sub}"[:200], ip)
+    except oidc.OidcError as exc:
+        problem = _(oidc.public_message(exc))
+    conn.execute("DELETE FROM oidc_flows WHERE id = ?", (flow["id"],))
+    response = render(
+        request,
+        "sso_linked.html",
+        None,
+        status=400 if problem else 200,
+        problem=problem,
+        account=user["username"] if user else "",
+    )
+    response.delete_cookie(OIDC_COOKIE)
+    return response
+
+
+@router.post("/account/sso/link")
+def sso_link_start(
+    request: Request,
+    csrf: str = Form(""),
+    user: sqlite3.Row = Depends(web_user),
+    conn: sqlite3.Connection = Depends(get_db),
+    cfg: Settings = Depends(settings),
+) -> Response:
+    check_csrf(user, csrf)
+    if not cfg.oidc_enabled:
+        return redirect("/account")
+    try:
+        url, state, _code = oidc.start_flow(
+            conn, cfg, str(request.base_url), "web", next_url="/account", link_user_id=user["id"]
+        )
+    except oidc.OidcError as exc:
+        return _account_page(request, user, conn, _(oidc.public_message(exc)))
+    response = RedirectResponse(url, status_code=303)
+    response.set_cookie(
+        OIDC_COOKIE,
+        state,
+        max_age=oidc.FLOW_SECONDS,
+        httponly=True,
+        secure=_cookie_secure(request, cfg),
+        samesite="lax",
+    )
+    return response
 
 
 @router.post("/oidc/confirm")
@@ -1800,6 +1868,7 @@ ACTIVITY = {
     "user_changed": "Changed a user",
     "user_deleted": "Deleted a user",
     "user_2fa_reset": "Turned off two-factor sign-in of a user",
+    "sso_linked": "Linked the account for single sign-on",
     "device_owner": "Changed the owner of a device",
     "device_deleted": "Removed a device",
     "backup_created": "Created a backup",

@@ -125,6 +125,9 @@ So werden Konten zugeordnet:
   nicht: Bei vielen Anbietern wählt oder ändert man ihn selbst, und wer sich dort `admin`
   nennt, darf nicht das lokale Admin-Konto bekommen. `RDAPI_OIDC_LINK_BY_USERNAME=true`
   erlaubt es für Konten, die keine Admins sind.
+- **Admin-Konten werden nie automatisch verknüpft**, auch nicht über die E-Mail-Adresse.
+  Ein Admin meldet sich einmal mit Passwort an und klickt unter „Konto“ auf
+  „Mit … verknüpfen“.
 - Sonst wird ein neues Konto angelegt (außer bei `RDAPI_OIDC_CREATE_USERS=false`). Es hat
   kein Passwort, das jemand kennt; ein Admin kann unter „Benutzer“ eins setzen.
 - Mitglieder von `RDAPI_OIDC_ADMIN_GROUP` werden Admins. Admin-Rechte werden nie

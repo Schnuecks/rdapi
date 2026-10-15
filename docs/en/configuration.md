@@ -123,6 +123,8 @@ How accounts are matched:
   at many providers people choose or change it themselves, and whoever calls themselves
   `admin` there must not get the local admin account. `RDAPI_OIDC_LINK_BY_USERNAME=true`
   allows it for accounts that are not admins.
+- **Admin accounts are never linked automatically**, not even by email address. An admin
+  signs in once with the password and clicks “Link with …” under “Account”.
 - Otherwise a new account is created (unless `RDAPI_OIDC_CREATE_USERS=false`). It has no
   password anyone knows; an admin can set one under “Users”.
 - Members of `RDAPI_OIDC_ADMIN_GROUP` become admins. Admin rights are never taken away

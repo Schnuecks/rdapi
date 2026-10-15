@@ -10,7 +10,7 @@ from dataclasses import replace
 from urllib.parse import parse_qs, urlparse
 
 import pytest
-from conftest import ADMIN_PW, USER_PW
+from conftest import USER_PW, web_login
 from fastapi.testclient import TestClient
 
 from rdapi import oidc
@@ -202,7 +202,13 @@ def test_state_works_only_once(sso, provider):
     assert sso.get(back, follow_redirects=False).status_code == 401
 
 
-def test_admin_rights_are_never_removed(sso, provider, db):
+def link_with_provider(client: TestClient, provider: FakeProvider, csrf: str):
+    start = client.post("/account/sso/link", data={"csrf": csrf}, follow_redirects=False)
+    assert start.status_code == 303
+    return client.get(provider.authorize(start.headers["location"]), follow_redirects=False)
+
+
+def test_admin_is_never_linked_automatically_but_can_link_on_the_account_page(sso, provider, db):
     db.execute("UPDATE users SET email = 'admin@example.com' WHERE username = 'admin'")
     provider.who = {
         "sub": "u-9",
@@ -211,10 +217,52 @@ def test_admin_rights_are_never_removed(sso, provider, db):
         "email_verified": True,
         "groups": [],
     }
+    # Bestätigte E-Mail-Adresse eines Admins: kein automatisches Verknüpfen.
     web_sso_login(sso, provider)
-    assert db.execute("SELECT is_admin FROM users WHERE username = 'admin'").fetchone()[0] == 1
+    assert db.execute("SELECT oidc_sub FROM users WHERE username = 'admin'").fetchone()[0] == ""
+    db.execute("DELETE FROM users WHERE oidc_sub = 'u-9'")
+    sso.cookies.clear()
+
+    # Der Admin meldet sich mit Passwort an und verknüpft selbst.
+    csrf = web_login(sso)
+    assert "Link with Authelia" in sso.get("/account").text
+    done = link_with_provider(sso, provider, csrf)
+    assert done.status_code == 200 and "is now linked" in done.text
     assert db.execute("SELECT oidc_sub FROM users WHERE username = 'admin'").fetchone()[0] == "u-9"
-    assert ADMIN_PW  # Passwort-Anmeldung des Admins bleibt (siehe Test oben)
+    assert "Linked the account for single sign-on" in sso.get("/activity").text
+
+    # Ab jetzt per Anbieter; Admin-Rechte werden nie automatisch entzogen.
+    sso.cookies.clear()
+    assert web_sso_login(sso, provider).status_code == 303
+    assert db.execute("SELECT is_admin FROM users WHERE username = 'admin'").fetchone()[0] == 1
+
+
+def test_no_account_for_an_admin_email_when_creating_is_off(sso_cfg, provider, db):
+    app = create_app(replace(sso_cfg, oidc_create_users=False))
+    db.execute("UPDATE users SET email = 'admin@example.com' WHERE username = 'admin'")
+    provider.who = {"sub": "u-8", "email": "admin@example.com", "email_verified": True}
+    with TestClient(app) as c:
+        resp = web_sso_login(c, provider)
+        assert resp.status_code == 401 and "no account" in resp.text
+    assert db.execute("SELECT oidc_sub FROM users WHERE username = 'admin'").fetchone()[0] == ""
+
+
+def test_link_fails_if_the_provider_account_is_taken(sso, provider, db):
+    db.execute("UPDATE users SET oidc_sub = 'u-1' WHERE username = 'alice'")
+    csrf = web_login(sso)
+    done = link_with_provider(sso, provider, csrf)
+    assert done.status_code == 400 and "already linked to another account" in done.text
+    assert db.execute("SELECT oidc_sub FROM users WHERE username = 'admin'").fetchone()[0] == ""
+
+
+def test_link_needs_csrf_and_the_same_browser(sso, provider, db):
+    csrf = web_login(sso)
+    assert sso.post("/account/sso/link", data={"csrf": "falsch"}).status_code == 403
+    start = sso.post("/account/sso/link", data={"csrf": csrf}, follow_redirects=False)
+    back = provider.authorize(start.headers["location"])
+    sso.cookies.delete("rdapi_oidc")
+    assert sso.get(back, follow_redirects=False).status_code == 401
+    assert db.execute("SELECT oidc_sub FROM users WHERE username = 'admin'").fetchone()[0] == ""
 
 
 def test_app_login_with_provider(sso, provider, db):

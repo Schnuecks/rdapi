@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}{{ _('Single sign-on') }}{% endblock %}
+{% block flashes %}{% endblock %}
+{% block main %}
+<div class="login-page">
+  <div class="login-form">
+    <img src="/static/logo.svg" alt="" width="56" height="56">
+    <h1>{{ _('Single sign-on') }}</h1>
+    {% if problem %}
+    <p class="flash flash-warn">{{ problem }}</p>
+    {% else %}
+    <p>{{ _('Your account {name} is now linked. From now on you can also sign in with {provider}.', name=account, provider=sso_name) }}</p>
+    {% endif %}
+    <a class="button" href="/account">{{ _('Back to your account') }}</a>
+  </div>
+</div>
+{% endblock %}
