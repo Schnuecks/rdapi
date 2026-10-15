@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.10.6
+
+- **No inline styles any more:** the Content Security Policy now has `style-src 'self'`
+  without `'unsafe-inline'`. Tag colours in the address book come as CSS classes from a
+  small stylesheet (`/address-book/colors.css`) instead of `style` attributes.
+
 ## 0.10.5
 
 - **Forms may only lead to this server and the login page:** the Content Security Policy
