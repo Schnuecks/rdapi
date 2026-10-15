@@ -35,8 +35,9 @@ log = logging.getLogger("rdapi")
 
 PRUNE_INTERVAL = 6 * 3600
 
-# Inline erlaubt ist nur das kleine Skript im Kopf von base.html (Hash) und style-Attribute
-# für Tag-Farben; alles andere kommt von hier selbst. Formulare gehen nur an diese Seite und an
+# Inline erlaubt ist nur das kleine Skript im Kopf von base.html (Hash); alles andere kommt
+# von hier selbst, auch die Tag-Farben (Klassen aus /address-book/colors.css).
+# Formulare gehen nur an diese Seite und an
 # die Anmeldeseite eines Reverse Proxys (RDAPI_AUTH_PORTAL_URL) bzw. des Anbieters für die
 # Anmeldung (RDAPI_OIDC_ISSUER): Ist die Sitzung beim Proxy abgelaufen, leitet er ein
 # Formular dorthin um. Fehlt die Adresse, blockiert der Browser das ganze Absenden still
@@ -44,7 +45,7 @@ PRUNE_INTERVAL = 6 * 3600
 CSP = (
     "default-src 'self'; "
     "script-src 'self' 'sha256-{script_hash}'; "
-    "style-src 'self' 'unsafe-inline'; "
+    "style-src 'self'; "
     "img-src 'self' data:; "
     "frame-ancestors 'none'; base-uri 'none'; form-action {form_action}; object-src 'none'"
 )

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}{{ _('Address book') }}{% endblock %}
+{% block head %}<link rel="stylesheet" href="{{ color_css }}">{% endblock %}
 {% block main %}
 {% set q = '' if book.personal else '?book=' ~ (book.guid | urlencode) %}
 {% set amp = '&' if q else '?' %}
@@ -32,7 +33,7 @@
       <td>{{ p.alias or "–" }}</td>
       <td>{{ p.hostname or "–" }}{% if p.username %} <span class="hint small">· {{ p.username }}</span>{% endif %}</td>
       <td>{{ p.platform or "–" }}</td>
-      <td>{% for t in p.tags or [] %}<span class="tag" style="--tag: {{ colors.get(t, '#888888') }}">{{ t }}</span>{% endfor %}</td>
+      <td>{% for t in p.tags or [] %}<span class="tag {{ tag_classes.get(t, 'tag-c-888888') }}">{{ t }}</span>{% endfor %}</td>
       <td>{{ p.note if p.note is string else "" }}</td>
       {% if book.writable %}
       <td class="actions">
@@ -69,7 +70,7 @@
       <fieldset class="tag-choice">
         <legend>{{ _('Tags') }}</legend>
         {% for t in tags %}
-        <label class="check"><input type="checkbox" name="tags" value="{{ t.name }}"{% if edit and t.name in (edit.tags or []) %} checked{% endif %}> <span class="tag" style="--tag: {{ colors[t.name] }}">{{ t.name }}</span></label>
+        <label class="check"><input type="checkbox" name="tags" value="{{ t.name }}"{% if edit and t.name in (edit.tags or []) %} checked{% endif %}> <span class="tag {{ tag_classes[t.name] }}">{{ t.name }}</span></label>
         {% endfor %}
       </fieldset>
       {% endif %}

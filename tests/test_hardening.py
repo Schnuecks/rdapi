@@ -283,3 +283,29 @@ def test_appearance_cookies_are_http_only(client):
     resp = client.post("/appearance", data={"theme": "dark", "lang": "de"}, follow_redirects=False)
     cookies = resp.headers.get_list("set-cookie")
     assert len(cookies) == 2 and all("httponly" in c.lower() for c in cookies)
+
+
+def test_csp_allows_no_inline_styles(client):
+    csp = client.get("/login").headers["content-security-policy"]
+    assert "style-src 'self';" in csp and "unsafe-inline" not in csp
+
+
+def test_tag_colours_come_from_a_stylesheet(client):
+    csrf = web_login(client)
+    client.post("/address-book/tags", data={"csrf": csrf, "name": "Family", "color": "#4C9A2A"})
+    client.post(
+        "/address-book/peers",
+        data={"csrf": csrf, "peer_id": "123", "alias": "x", "tags": ["Family", "Gone"]},
+    )
+    page = client.get("/address-book").text
+    assert "style=" not in page
+    assert 'class="tag tag-c-4c9a2a"' in page
+    href = re.search(r'href="(/address-book/colors\.css\?c=[^"]+)"', page).group(1)
+    css = client.get(href.replace("&amp;", "&"))
+    assert css.headers["content-type"].startswith("text/css")
+    assert ".tag-c-4c9a2a{--tag:#4c9a2a}" in css.text and ".tag-c-888888{" in css.text
+
+
+def test_colour_stylesheet_accepts_only_colours(client):
+    css = client.get("/address-book/colors.css", params={"c": "ff0000,}body{x:1,zz0000,ABCDEF"})
+    assert css.text == ".tag-c-abcdef{--tag:#abcdef}\n.tag-c-ff0000{--tag:#ff0000}\n"

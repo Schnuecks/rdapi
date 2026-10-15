@@ -8,6 +8,7 @@ geschützt, wenn eine Regel im Proxy einmal nicht greift.
 from __future__ import annotations
 
 import json
+import re
 import secrets
 import shutil
 import sqlite3
@@ -895,6 +896,28 @@ def _color_int(value: str) -> int:
     return 0xFF000000 | int(value, 16)
 
 
+def _color_class(value: str) -> str:
+    """CSS-Klasse für eine Tag-Farbe (#rrggbb), definiert in /address-book/colors.css."""
+    return "tag-c-" + value.lstrip("#").lower()
+
+
+HEX6 = re.compile(r"[0-9a-f]{6}")
+
+
+@router.get("/address-book/colors.css")
+def tag_colors_css(c: str = "") -> Response:
+    """Klassen für die Tag-Farben, damit die Seite ohne style-Attribute auskommt (die CSP
+    erlaubt keine Inline-Styles). Nur gültige Farben, höchstens 500; enthält nichts
+    Persönliches und darf deshalb lange zwischengespeichert werden."""
+    values = sorted({v for v in c.lower().split(",") if HEX6.fullmatch(v)})[:500]
+    css = "".join(f".tag-c-{v}{{--tag:#{v}}}\n" for v in values)
+    return Response(
+        css,
+        media_type="text/css",
+        headers={"Cache-Control": "public, max-age=31536000, immutable"},
+    )
+
+
 def _book(
     conn: sqlite3.Connection, user: sqlite3.Row, guid: str, write: bool = False
 ) -> sharing.Book:
@@ -927,6 +950,8 @@ def _ab_page(
         )
     ]
     colors = {t["name"]: _color_hex(t["color"]) for t in tags}
+    tag_classes = {name: _color_class(value) for name, value in colors.items()}
+    used = sorted({value[1:] for value in colors.values()} | {"888888"})
     admin_ctx: dict[str, Any] = {}
     if user["is_admin"] and not book.personal:
         admin_ctx = {
@@ -948,6 +973,8 @@ def _ab_page(
         peers=peers,
         tags=tags,
         colors=colors,
+        tag_classes=tag_classes,
+        color_css="/address-book/colors.css?c=" + ",".join(used),
         edit=edit,
         error=error,
         RULES=sharing.RULES,
