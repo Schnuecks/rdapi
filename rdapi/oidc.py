@@ -44,7 +44,8 @@ FAILED = "The sign-in with the provider failed. Please try again."
 EXPIRED = "The sign-in has expired. Please sign in again."
 NO_ACCOUNT = "There is no account for you yet. Please ask an admin to create one."
 DISABLED = "Your account is disabled."
-MESSAGES = (FAILED, EXPIRED, NO_ACCOUNT, DISABLED)
+TAKEN = "This account at the provider is already linked to another account."
+MESSAGES = (FAILED, EXPIRED, NO_ACCOUNT, DISABLED, TAKEN)
 _SHOWN = {m: m for m in MESSAGES}
 
 
@@ -105,8 +106,12 @@ def start_flow(
     device_id: str = "",
     device_uuid: str = "",
     client_info: str = "",
+    link_user_id: int | None = None,
 ) -> tuple[str, str, str]:
-    """Legt eine Anmeldung an. Liefert (Adresse beim Anbieter, state, App-Code)."""
+    """Legt eine Anmeldung an. Liefert (Adresse beim Anbieter, state, App-Code).
+
+    Mit link_user_id verknüpft der Rücksprung nur dieses (angemeldete) Konto, statt
+    jemanden anzumelden."""
     doc = discovery(cfg.oidc_issuer)
     state = secrets.token_urlsafe(32)
     nonce = secrets.token_urlsafe(24)
@@ -114,8 +119,8 @@ def start_flow(
     app_code = secrets.token_urlsafe(24) if kind == "app" else ""
     conn.execute(
         "INSERT INTO oidc_flows (state_hash, kind, nonce, verifier, next, app_code_hash,"
-        " device_id, device_uuid, client_info, expires_at)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        " device_id, device_uuid, client_info, user_id, expires_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
         (
             token_hash(state),
             kind,
@@ -126,6 +131,7 @@ def start_flow(
             device_id,
             device_uuid,
             client_info,
+            link_user_id,
             now() + FLOW_SECONDS,
         ),
     )
@@ -227,7 +233,8 @@ def user_for(conn: sqlite3.Connection, cfg: Settings, who: Person) -> sqlite3.Ro
     bestätigte E-Mail-Adresse (und dann verknüpfen), sonst neu anlegen.
 
     Den Benutzernamen kann man bei vielen Anbietern selbst wählen oder ändern; darüber wird
-    nur mit RDAPI_OIDC_LINK_BY_USERNAME verknüpft, und nie mit einem Admin-Konto."""
+    nur mit RDAPI_OIDC_LINK_BY_USERNAME verknüpft. Admin-Konten werden nie automatisch
+    verknüpft: Ein Admin meldet sich mit Passwort an und verknüpft unter „Konto“ selbst."""
     row = conn.execute("SELECT * FROM users WHERE oidc_sub = ?", (who.sub,)).fetchone()
     if row is None and who.username and cfg.oidc_link_by_username:
         row = conn.execute(
@@ -236,7 +243,8 @@ def user_for(conn: sqlite3.Connection, cfg: Settings, who: Person) -> sqlite3.Ro
         ).fetchone()
     if row is None and who.email and who.email_verified:
         row = conn.execute(
-            "SELECT * FROM users WHERE email = ? COLLATE NOCASE AND oidc_sub = ''", (who.email,)
+            "SELECT * FROM users WHERE email = ? COLLATE NOCASE AND oidc_sub = '' AND is_admin = 0",
+            (who.email,),
         ).fetchone()
     if row is None:
         if not cfg.oidc_create_users or not who.username:
@@ -267,6 +275,16 @@ def user_for(conn: sqlite3.Connection, cfg: Settings, who: Person) -> sqlite3.Ro
     sets = ", ".join(f"{k} = ?" for k in updates)
     conn.execute(f"UPDATE users SET {sets} WHERE id = ?", (*updates.values(), row["id"]))
     return conn.execute("SELECT * FROM users WHERE id = ?", (row["id"],)).fetchone()
+
+
+def link(conn: sqlite3.Connection, user_id: int, who: Person) -> None:
+    """Verknüpft ein bestehendes Konto (auf Wunsch des angemeldeten Benutzers)."""
+    other = conn.execute(
+        "SELECT id FROM users WHERE oidc_sub = ? AND id != ?", (who.sub, user_id)
+    ).fetchone()
+    if other is not None:
+        raise OidcError(TAKEN)
+    conn.execute("UPDATE users SET oidc_sub = ? WHERE id = ?", (who.sub, user_id))
 
 
 def _free_username(conn: sqlite3.Connection, wanted: str) -> str:

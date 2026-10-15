@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.10.7
+
+- **Admin accounts are never linked to single sign-on automatically**, not even by an
+  email address the provider confirms. Before, someone with a provider account carrying an
+  admin's email address could get that admin account on the first sign-in.
+- **Link on the account page:** “Link with …” under “Account” links your own account to the
+  provider after signing in with the password; useful for admins and for accounts without
+  a matching email address. The activity log records it.
+
 ## 0.10.6
 
 - **No inline styles any more:** the Content Security Policy now has `style-src 'self'`
