@@ -292,12 +292,16 @@ def appearance(
     # Gespeichert wird nur ein Wert aus der eigenen Liste, nie die Eingabe selbst.
     chosen_lang = _pick(lang, i18n.LANGUAGES)
     if chosen_lang:
-        response.set_cookie(i18n.LANG_COOKIE, chosen_lang, max_age=ONE_YEAR, samesite="lax")
+        response.set_cookie(
+            i18n.LANG_COOKIE, chosen_lang, max_age=ONE_YEAR, samesite="lax", httponly=True
+        )
     elif lang == "auto":
         response.delete_cookie(i18n.LANG_COOKIE)
     chosen_theme = _pick(theme, i18n.THEMES)
     if chosen_theme:
-        response.set_cookie(i18n.THEME_COOKIE, chosen_theme, max_age=ONE_YEAR, samesite="lax")
+        response.set_cookie(
+            i18n.THEME_COOKIE, chosen_theme, max_age=ONE_YEAR, samesite="lax", httponly=True
+        )
     return response
 
 
