@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## 0.10.5
 
 - **Forms may only lead to this server and the login page:** the Content Security Policy
   allowed forms to go to any HTTPS address (`form-action 'self' https:`), so that a reverse
