@@ -46,17 +46,6 @@ nachgestellten Authenticator,
 `tests/test_backup_and_ab.py` Sicherungen und das Adressbuch in der Weboberfläche und
 `tests/test_proxy.py` den Umgang mit `X-Forwarded-For`.
 
-## Screenshots
-
-```bash
-pip install playwright && python -m playwright install chromium
-python tools/make_screenshots.py
-```
-
-Das legt eine Demo-Datenbank mit erfundenen Geräten und Verbindungen an und speichert die
-Bilder in `docs/screenshots/`. `python tools/make_screenshots.py --serve 8770` startet nur
-den Server mit den Demo-Daten (Anmeldung: `admin` / `demo-password-1`).
-
 ## API-Endpunkte
 
 | Funktion | Endpunkte |
