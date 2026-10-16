@@ -45,17 +45,6 @@ simulated provider, `tests/test_passkeys.py` passkeys with a simulated authentic
 the address book in the web interface, and `tests/test_proxy.py` the handling of
 `X-Forwarded-For`.
 
-## Screenshots
-
-```bash
-pip install playwright && python -m playwright install chromium
-python tools/make_screenshots.py
-```
-
-This creates a demo database with made-up devices and connections and saves the pictures
-to `docs/screenshots/`. `python tools/make_screenshots.py --serve 8770` only starts the
-server with the demo data (sign-in: `admin` / `demo-password-1`).
-
 ## API endpoints
 
 | Feature | Endpoints |
