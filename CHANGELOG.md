@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.10.8
+
+- **Python 3.14:** the container image is now based on `python:3.14-slim` instead of
+  `python:3.12-slim`. Tests in the CI run on Python 3.14 as well.
+- **Updated dependencies:** FastAPI 0.143.0. RDAPI does not use OpenTelemetry, so the
+  change in FastAPI's automatic exporter setup has no effect.
+
 ## 0.10.7
 
 - **Admin accounts are never linked to single sign-on automatically**, not even by an

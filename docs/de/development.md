@@ -4,7 +4,7 @@
 
 ## Lokal starten
 
-Du brauchst Python 3.12.
+Du brauchst Python 3.14.
 
 ```bash
 pip install -r requirements-dev.txt
