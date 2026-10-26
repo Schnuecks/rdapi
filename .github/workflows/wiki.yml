@@ -25,7 +25,7 @@ jobs:
           path: wiki
       - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7
         with:
-          python-version: "3.12"
+          python-version: "3.14"
       - name: Seiten erzeugen
         run: python tools/wiki_sync.py wiki --repo "$GITHUB_REPOSITORY" --version "$GITHUB_REF_NAME"
       - name: Ins Wiki hochladen
