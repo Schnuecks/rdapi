@@ -184,7 +184,8 @@ def _source_texts() -> set[str]:
     keys |= set(backup.MESSAGES)
     keys |= set(oidc.MESSAGES)
     keys |= set(passkeys.MESSAGES)
-    keys |= set(web.ACTIVITY.values())
+    keys |= set(web.ACTIVITY.values()) | set(web.ALARM_TYPES.values())
+    keys.add(web.IMPORT_RESULT)
     keys |= set(sharing.RULES.values()) | set(web.FILE_DIRECTIONS.values())
     keys.add("unknown")  # Art einer Verbindung, die die App nicht kennt (_connections.html)
     keys |= {

@@ -38,13 +38,15 @@ Weboberfläche, um alles zu verwalten.
 - **Anmeldung in der App** mit Benutzername und Passwort, mehrere Benutzer, Admins und
   normale Benutzer
 - **Adressbuch** je Benutzer mit Tags, abgeglichen zwischen allen Geräten, auf denen du
-  angemeldet bist, und auch in der Weboberfläche bearbeitbar
+  angemeldet bist, und auch in der Weboberfläche bearbeitbar, mit **Import und Export** als
+  JSON oder CSV
 - **Geteilte Adressbücher** für Familie oder Team, je Benutzer oder Gruppe mit nur lesen,
   lesen und ändern oder voller Kontrolle
 - **Geräteliste** mit Online-Status, Betriebssystem und Version; die App zeigt deine Geräte
   und die deiner **Gruppen** unter „Zugängliche Geräte“
 - **Verbindungsverlauf:** wer sich wann und wie lange mit welchem Gerät verbunden hat,
-  dazu die Dateien, die während einer Verbindung kopiert wurden
+  dazu die Dateien, die während einer Verbindung kopiert wurden, und die **Alarme** der
+  App, z. B. nach vielen falschen Passwörtern
 - **Weboberfläche** für Geräte, Verlauf, Adressbuch, Benutzer, Anmeldungen und dein Konto,
   in sechs Sprachen (Deutsch, Englisch, Französisch, Spanisch, Italienisch, Niederländisch),
   hell und dunkel

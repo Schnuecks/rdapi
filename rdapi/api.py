@@ -106,7 +106,7 @@ def text(value: Any, limit: int = 255) -> str:
 def as_int(value: Any) -> int | None:
     try:
         return int(value)
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         return None
 
 
@@ -960,7 +960,7 @@ async def legacy_ab_post(
     tags = [text(t, 100) for t in book.get("tags") or [] if text(t, 100)]
     try:
         colors = json.loads(book.get("tag_colors") or "{}")
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         colors = {}
     if not isinstance(colors, dict):
         colors = {}

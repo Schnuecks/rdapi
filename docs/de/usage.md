@@ -46,7 +46,12 @@ ist angemeldet. In der Weboberfläche steht derselbe Knopf auf der Anmeldeseite.
   Beginn, Dauer, Art und der Adresse der Gegenseite. Nicht angenommene Versuche sind grau.
   Auch Dateien, die während einer Verbindung auf oder von einem Gerät kopiert werden
   (Dateiübertragung oder Kopieren und Einfügen von Dateien), werden festgehalten, mit
-  Richtung, Ordner, Anzahl und den ersten Dateinamen.
+  Richtung, Ordner, Anzahl und den ersten Dateinamen. Ebenso die Alarme, die die App auf
+  einem Gerät auslöst: mehr als 6 falsche Passwörter in einer Minute oder mehr als 30
+  insgesamt, zu viele falsche Passwörter aus einem IPv6-Netz, eine Adresse oder ID, die
+  nicht in der Liste der erlaubten des Geräts steht, eine pausierte oder überlastete
+  Terminal-Anmeldung und eine Verbindung, die mehr getan hat, als ihr erlaubt war. Jeder
+  Alarm zeigt die Adresse und, wenn bekannt, ID und Namen der Gegenseite.
 
 ## Weboberfläche
 
@@ -56,13 +61,20 @@ der App an.
 - **Geräte:** Name, ID, Besitzer, Betriebssystem, Version und Online-Status; ein Klick
   zeigt Details wie CPU und Arbeitsspeicher, die letzten Verbindungen, eine Notiz und den
   Besitzer, den Admins ändern können
-- **Verlauf:** alle eingehenden Verbindungen und auf einem zweiten Reiter alle
-  Dateiübertragungen, neueste zuerst, nach Gerät filterbar
+- **Verlauf:** alle eingehenden Verbindungen und auf weiteren Reitern alle
+  Dateiübertragungen und Alarme, neueste zuerst, nach Gerät filterbar
 - **Adressbuch:** Einträge anlegen, bearbeiten und entfernen (ID, Alias, Notiz, Tags)
   und Tags mit ihren Farben verwalten; Felder, die nur die App kennt, z. B. gespeicherte
   Passwörter, bleiben erhalten und werden nie angezeigt. Die Reiter oben wechseln zwischen
   dem eigenen und den geteilten Adressbüchern; Admins legen dort geteilte Adressbücher an
-  und bestimmen, wer sie sieht
+  und bestimmen, wer sie sieht.
+  **Import und Export:** ein Adressbuch als JSON (mit Tag-Farben) oder CSV herunterladen
+  und eine solche Datei in ein Adressbuch einlesen, das du ändern darfst. Eine CSV-Tabelle
+  braucht eine Spalte `id`; `alias`, `note`, `tags`, `hostname`, `platform` und `username`
+  sind freiwillig, mehrere Tags trennt ein Semikolon. Neue IDs kommen dazu, vorhandene
+  Einträge werden aktualisiert und behalten ihre Tags, gelöscht wird nichts. Gespeicherte
+  Passwörter werden weder exportiert noch importiert. Höchstens 5.000 Einträge je
+  Adressbuch
 - **Benutzer** (nur Admins): Benutzer anlegen, bearbeiten, sperren und löschen, neue
   Passwörter setzen, jemanden zum Admin machen sowie Gruppen und ihre Mitglieder verwalten
 - **Anmeldungen** (nur Admins): alle Anmeldeversuche in App und Weboberfläche,

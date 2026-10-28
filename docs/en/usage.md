@@ -43,7 +43,12 @@ page.
   start, duration, type and the address of the other side. Attempts that were not
   accepted are shown in grey. Files copied to or from a device during a connection
   (file transfer or copy and paste of files) are recorded as well, with direction,
-  folder, number of files and the first file names.
+  folder, number of files and the first file names. Alarms the app raises on a device are
+  kept too: more than 6 wrong passwords within a minute or more than 30 in total, too many
+  wrong passwords from one IPv6 network, an address or ID that is not on the device's
+  allowed list, a paused or crowded terminal sign-in and a connection that went beyond what
+  it was allowed to do. Each alarm shows the address and, if known, the ID and name of the
+  other side.
 
 ## Web interface
 
@@ -53,12 +58,18 @@ app.
 - **Devices:** name, ID, owner, operating system, version and online status; a click
   shows details such as CPU and memory, the latest connections, a note and the owner,
   which admins can change
-- **History:** all incoming connections and, on a second tab, all file transfers, newest
-  first, filterable by device
+- **History:** all incoming connections and, on further tabs, all file transfers and
+  alarms, newest first, filterable by device
 - **Address book:** add, edit and remove entries (ID, alias, note, tags) and manage
   tags with their colours; fields only the app knows, such as saved passwords, are kept
   and never shown. The tabs at the top switch between your own and the shared address
-  books; admins create shared address books there and choose who may see them
+  books; admins create shared address books there and choose who may see them.
+  **Import and export:** download an address book as JSON (with tag colours) or CSV, and
+  import such a file into an address book you may change. A CSV table needs a column
+  `id`; `alias`, `note`, `tags`, `hostname`, `platform` and `username` are optional, and
+  several tags are separated by a semicolon. New IDs are added, existing entries are
+  updated and keep their tags, nothing is deleted. Saved passwords are neither exported
+  nor imported. At most 5,000 entries per address book
 - **Users** (admins only): create, edit, disable and delete users, set new passwords,
   make someone an admin, and manage groups and their members
 - **Logins** (admins only): all sign-in attempts in the app and the web interface,

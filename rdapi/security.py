@@ -55,7 +55,7 @@ def authenticate(conn: sqlite3.Connection, username: str, password: str) -> sqli
         return None
     try:
         _hasher.verify(row["password_hash"], password)
-    except (VerifyMismatchError, VerificationError, InvalidHashError):
+    except VerifyMismatchError, VerificationError, InvalidHashError:
         return None
     if _hasher.check_needs_rehash(row["password_hash"]):
         conn.execute(
