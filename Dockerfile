@@ -15,7 +15,11 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /srv
 COPY requirements.txt .
-RUN pip install --no-cache-dir -r requirements.txt
+# pip wird zur Laufzeit nicht gebraucht und bringt eigene, oft veraltete Pakete mit
+# (urllib3, msgpack …), die der Image-Scan meldet: nach der Installation entfernen.
+RUN pip install --no-cache-dir -r requirements.txt \
+    && pip uninstall -y pip \
+    && rm -rf /usr/local/lib/python3*/ensurepip/_bundled
 COPY rdapi ./rdapi
 
 # Läuft ohne Root; compose kann mit user: PUID:PGID einen anderen Benutzer setzen
