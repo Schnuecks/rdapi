@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.11.1
+
+- **pip removed from the image:** pip is only needed to build the image. It brought its
+  own copies of urllib3 and msgpack with known vulnerabilities, which the image scan
+  reported. RDAPI never used them; the image now contains no pip at all.
+
 ## 0.11.0
 
 - **Alarms in the history:** a new tab under “History” shows the alarms the RustDesk app
