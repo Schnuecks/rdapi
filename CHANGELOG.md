@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.11.0
+
+- **Alarms in the history:** a new tab under “History” shows the alarms the RustDesk app
+  sends, e.g. after more than 6 wrong passwords within a minute or a connection from an
+  address that is not on the device's allowed list, with the address, ID and name of the
+  other side. RDAPI stored these reports before, but did not show them.
+- **Import and export of address books:** download an address book as JSON or CSV and
+  import such a file. Existing entries are updated and keep their tags, nothing is deleted.
+  Passwords saved in the app are never exported or imported. Imports and exports are
+  recorded in the activity log.
+- **Updated dependencies:** FastAPI 0.150.0. The tests use `httpx2` instead of `httpx`, and
+  the code is checked for Python 3.14.
+
 ## 0.10.8
 
 - **Python 3.14:** the container image is now based on `python:3.14-slim` instead of

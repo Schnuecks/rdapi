@@ -7,6 +7,8 @@ geschützt, wenn eine Regel im Proxy einmal nicht greift.
 
 from __future__ import annotations
 
+import csv
+import io
 import json
 import re
 import secrets
@@ -27,7 +29,7 @@ from fastapi.responses import (
 from fastapi.templating import Jinja2Templates
 
 from . import __version__, backup, i18n, oidc, passkeys, secretbox, sharing
-from .api import add_tag, load_peer, rewrite_peer_tags, save_peer
+from .api import MAX_AB_PEERS, add_tag, load_peer, rewrite_peer_tags, save_peer
 from .config import Settings
 from .db import connect, now, transaction
 from .deps import client_ip, get_db, limiter, public_limiter, settings
@@ -225,13 +227,14 @@ def render(
     **ctx: Any,
 ) -> HTMLResponse:
     message = MESSAGES.get(request.query_params.get("ok", ""))
+    message = _(message) if message else ctx.pop("message", None)
     cfg = request.app.state.settings
     ctx.update(
         user=user,
         csrf=user["t_csrf"] if user is not None else "",
         sso_name=cfg.oidc_name if cfg.oidc_enabled else "",
         passkey_login=name == "login.html" and _any_passkeys(cfg.db_path),
-        message=_(message) if message else None,
+        message=message,
         online_after=now() - cfg.online_seconds,
     )
     ctx.setdefault("error", None)
@@ -854,7 +857,7 @@ def _file_event(row: sqlite3.Row) -> dict[str, Any]:
         data = {}
     try:
         info = json.loads(data.get("info") or "{}")
-    except (TypeError, ValueError):
+    except TypeError, ValueError:
         info = {}
     if not isinstance(info, dict):
         info = {}
@@ -908,6 +911,83 @@ def history_files(
         pages=pages,
         total=total,
         FILE_DIRECTIONS=FILE_DIRECTIONS,
+    )
+
+
+# Alarmarten, wie die App sie meldet (AlarmAuditType); 3–5 nutzt die App nicht mehr.
+ALARM_TYPES = {
+    0: "Address not on the allowed list",
+    1: "More than 30 wrong passwords",
+    2: "More than 6 wrong passwords within a minute",
+    6: "Too many wrong passwords from one IPv6 network",
+    7: "Terminal sign-in paused after failed attempts",
+    8: "Too many terminal sign-ins at the same time",
+    9: "Connection went beyond what it was allowed to do",
+    10: "ID not on the allowed list",
+}
+
+
+def _alarm_event(row: sqlite3.Row) -> dict[str, Any]:
+    """Ein Alarm der App (Audit „alarm“) für die Anzeige."""
+    try:
+        data = json.loads(row["payload"])
+    except ValueError:
+        data = {}
+    if not isinstance(data, dict):
+        data = {}
+    try:
+        info = json.loads(data.get("info") or "{}")
+    except TypeError, ValueError:
+        info = {}
+    if not isinstance(info, dict):
+        info = {}
+    typ = data.get("typ")
+    return {
+        "created_at": row["created_at"],
+        "device_id": row["device_id"],
+        "hostname": row["hostname"],
+        "typ": typ if isinstance(typ, int) and not isinstance(typ, bool) else None,
+        "peer_id": str(info.get("id") or "")[:64],
+        "peer_name": str(info.get("name") or "")[:100],
+        "ip": str(info.get("ip") or "")[:64],
+        "message": str(info.get("message") or "")[:200],
+    }
+
+
+@router.get("/history/alarms", response_class=HTMLResponse)
+def history_alarms(
+    request: Request,
+    device: str = "",
+    page: int = 1,
+    user: sqlite3.Row = Depends(web_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> HTMLResponse:
+    where, params = ["a.kind = 'alarm'"], []
+    if not user["is_admin"]:
+        where.append("d.user_id = ?")
+        params.append(user["id"])
+    if device:
+        where.append("a.device_id = ?")
+        params.append(device)
+    base = "FROM audit_events a LEFT JOIN devices d ON d.id = a.device_id WHERE " + " AND ".join(
+        where
+    )
+    total = conn.execute(f"SELECT COUNT(*) {base}", params).fetchone()[0]
+    page, pages, offset = _pages(total, page, PAGE_SIZE)
+    rows = conn.execute(
+        f"SELECT a.*, d.hostname {base} ORDER BY a.created_at DESC, a.id DESC LIMIT ? OFFSET ?",
+        (*params, PAGE_SIZE, offset),
+    ).fetchall()
+    return render(
+        request,
+        "history_alarms.html",
+        user,
+        rows=[_alarm_event(r) for r in rows],
+        device=device,
+        page=page,
+        pages=pages,
+        total=total,
+        ALARM_TYPES=ALARM_TYPES,
     )
 
 
@@ -1007,6 +1087,7 @@ def _ab_page(
     book: sharing.Book,
     error: str | None = None,
     edit: dict[str, Any] | None = None,
+    message: str | None = None,
 ) -> HTMLResponse:
     tags = conn.execute(
         "SELECT name, color FROM ab_tags WHERE ab_guid = ? ORDER BY position", (book.guid,)
@@ -1045,6 +1126,7 @@ def _ab_page(
         color_css="/address-book/colors.css?c=" + ",".join(used),
         edit=edit,
         error=error,
+        message=message,
         RULES=sharing.RULES,
         **admin_ctx,
     )
@@ -1175,6 +1257,221 @@ def address_book_delete_tag(
         conn.execute("DELETE FROM ab_tags WHERE ab_guid = ? AND name = ?", (chosen.guid, name))
         rewrite_peer_tags(conn, chosen.guid, lambda ts: [t for t in ts if t != name])
     return redirect(_ab_url(chosen), "deleted")
+
+
+# Import und Export: nur Felder, die man auch in der Weboberfläche sieht. Gespeicherte
+# Passwörter der App (hash, password) verlassen den Server nie und lassen sich nicht setzen.
+EXPORT_FIELDS = ("id", "alias", "note", "tags", "hostname", "platform", "username")
+FIELD_LIMITS = {"alias": 100, "note": 500, "hostname": 100, "platform": 100, "username": 100}
+EXPORT_FORMAT = "rdapi-address-book"
+MAX_IMPORT = 2 * 1024 * 1024 - 64 * 1024  # passt mit dem Formular in die Grenze der Anfrage
+CSV_TAG_SEPARATOR = ";"
+IMPORT_RESULT = "Import finished: {added} new, {updated} updated, {skipped} skipped."
+
+
+def _export_name(book: sharing.Book, user: sqlite3.Row, suffix: str) -> str:
+    base = user["username"] if book.personal else book.name
+    slug = re.sub(r"[^A-Za-z0-9._-]+", "-", base).strip("-.")[:60] or "shared"
+    return f"address-book-{slug}.{suffix}"
+
+
+def _csv_cell(value: str) -> str:
+    """Schützt Tabellenprogramme vor Formeln in Feldern (CSV-Injection)."""
+    return "'" + value if value[:1] in ("=", "+", "-", "@", "\t", "\r") else value
+
+
+@router.get("/address-book/export")
+def address_book_export(
+    request: Request,
+    book: str = "",
+    format: str = "json",
+    user: sqlite3.Row = Depends(web_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    chosen = _book(conn, user, book)
+    tags = conn.execute(
+        "SELECT name, color FROM ab_tags WHERE ab_guid = ? ORDER BY position", (chosen.guid,)
+    ).fetchall()
+    peers = []
+    for r in conn.execute(
+        "SELECT data FROM ab_peers WHERE ab_guid = ? ORDER BY position", (chosen.guid,)
+    ):
+        data = json.loads(r["data"])
+        peer = {k: data[k] for k in EXPORT_FIELDS if isinstance(data.get(k), str) and data[k]}
+        peer["tags"] = [t for t in data.get("tags") or [] if isinstance(t, str)]
+        peers.append(peer)
+    log_activity(
+        conn,
+        user,
+        "ab_exported",
+        user["username"] if chosen.personal else chosen.name,
+        f"{len(peers)} entries, {'csv' if format == 'csv' else 'json'}",
+        ip=client_ip(request),
+    )
+    if format == "csv":
+        out = io.StringIO()
+        out.write("\ufeff")  # damit Tabellenprogramme Umlaute als UTF-8 erkennen
+        writer = csv.writer(out)
+        writer.writerow(EXPORT_FIELDS)
+        for p in peers:
+            writer.writerow(
+                [
+                    _csv_cell(CSV_TAG_SEPARATOR.join(p["tags"]) if k == "tags" else p.get(k, ""))
+                    for k in EXPORT_FIELDS
+                ]
+            )
+        body, media, suffix = out.getvalue(), "text/csv; charset=utf-8", "csv"
+    else:
+        body = json.dumps(
+            {
+                "format": EXPORT_FORMAT,
+                "version": 1,
+                "name": "" if chosen.personal else chosen.name,
+                "tags": [{"name": t["name"], "color": _color_hex(t["color"])} for t in tags],
+                "peers": peers,
+            },
+            ensure_ascii=False,
+            indent=2,
+        )
+        media, suffix = "application/json", "json"
+    return Response(
+        body,
+        media_type=media,
+        headers={
+            "Content-Disposition": f'attachment; filename="{_export_name(chosen, user, suffix)}"',
+            "Cache-Control": "no-store",
+        },
+    )
+
+
+class AddressBookFileError(ValueError):
+    """Datei lässt sich nicht als Adressbuch lesen; die Meldung ist schon übersetzt."""
+
+
+def _clean_import_peer(raw: dict[str, Any]) -> dict[str, Any] | None:
+    peer_id = "".join(str(raw.get("id") or "").split())[:64]
+    if not peer_id:
+        return None
+    peer: dict[str, Any] = {"id": peer_id}
+    for key, limit in FIELD_LIMITS.items():
+        value = raw.get(key)
+        if isinstance(value, str) and value.strip():
+            peer[key] = value.strip()[:limit]
+    tags = raw.get("tags")
+    if isinstance(tags, str):
+        tags = tags.split(CSV_TAG_SEPARATOR)
+    if isinstance(tags, list):
+        names = [t.strip()[:100] for t in tags if isinstance(t, str) and t.strip()]
+        peer["tags"] = list(dict.fromkeys(names))
+    return peer
+
+
+def _parse_import(content: bytes) -> tuple[list[dict[str, Any]], dict[str, int], int]:
+    """Liest eine Export-Datei (JSON) oder eine CSV-Tabelle mit Spalte „id“.
+    Ergibt Einträge, Tag-Farben und die Zahl der Zeilen ohne ID."""
+    try:
+        textual = content.decode("utf-8-sig")
+    except UnicodeDecodeError:
+        raise AddressBookFileError(_("The file is not a valid address book export.")) from None
+    colors: dict[str, int] = {}
+    if textual.lstrip().startswith("{"):
+        try:
+            data = json.loads(textual)
+        except ValueError:
+            raise AddressBookFileError(_("The file is not a valid address book export.")) from None
+        if not isinstance(data, dict) or not isinstance(data.get("peers"), list):
+            raise AddressBookFileError(_("The file is not a valid address book export."))
+        rows = [p for p in data["peers"] if isinstance(p, dict)]
+        for t in data.get("tags") or []:
+            if isinstance(t, dict) and isinstance(t.get("name"), str) and t["name"].strip():
+                colors[t["name"].strip()[:100]] = _color_int(str(t.get("color") or ""))
+    else:
+        # Tabellenprogramme mit deutscher Einstellung speichern CSV mit Semikolon.
+        head = textual.split("\n", 1)[0]
+        delimiter = ";" if head.count(";") > head.count(",") else ","
+        reader = csv.DictReader(io.StringIO(textual), delimiter=delimiter)
+        fields = {(f or "").strip().lower(): f for f in reader.fieldnames or []}
+        if "id" not in fields:
+            raise AddressBookFileError(_("The CSV file needs a column named id."))
+        rows = [
+            {k: (row.get(orig) or "") for k, orig in fields.items() if k in EXPORT_FIELDS}
+            for row in reader
+        ]
+    if len(rows) > MAX_AB_PEERS:
+        raise AddressBookFileError(_("The file has too many entries."))
+    peers, skipped = [], 0
+    for raw in rows:
+        peer = _clean_import_peer(raw)
+        if peer is None:
+            skipped += 1
+        else:
+            peers.append(peer)
+    return peers, colors, skipped
+
+
+@router.post("/address-book/import")
+async def address_book_import(
+    request: Request,
+    csrf: str = Form(""),
+    book: str = Form(""),
+    file: UploadFile = File(...),
+    user: sqlite3.Row = Depends(web_user),
+    conn: sqlite3.Connection = Depends(get_db),
+) -> Response:
+    """Ergänzt das Adressbuch: neue IDs kommen dazu, vorhandene Einträge bekommen die Felder
+    aus der Datei, Tags werden hinzugefügt. Gelöscht wird nichts."""
+    check_csrf(user, csrf)
+    chosen = _book(conn, user, book, write=True)
+    content = await file.read(MAX_IMPORT + 1)
+    if len(content) > MAX_IMPORT:
+        return _ab_page(request, user, conn, chosen, _("The file is too large."))
+    try:
+        peers, colors, skipped = _parse_import(content)
+    except AddressBookFileError as exc:
+        return _ab_page(request, user, conn, chosen, str(exc))
+    guid = chosen.guid
+    added = updated = 0
+    with transaction(conn):
+        existing = conn.execute(
+            "SELECT COUNT(*) FROM ab_peers WHERE ab_guid = ?", (guid,)
+        ).fetchone()[0]
+        known = {
+            r["name"] for r in conn.execute("SELECT name FROM ab_tags WHERE ab_guid = ?", (guid,))
+        }
+        for name in dict.fromkeys([*colors, *(t for p in peers for t in p.get("tags", []))]):
+            if name not in known:
+                add_tag(conn, guid, name, colors.get(name, _color_int("")))
+                known.add(name)
+        for peer in peers:
+            current = load_peer(conn, guid, peer["id"])
+            if current is None:
+                if existing + added >= MAX_AB_PEERS:
+                    skipped += 1
+                    continue
+                added += 1
+                current = {}
+            else:
+                updated += 1
+                tags = current.get("tags") if isinstance(current.get("tags"), list) else []
+                peer["tags"] = list(dict.fromkeys([*tags, *peer.get("tags", [])]))
+            current.update(peer)
+            current.setdefault("tags", [])
+            save_peer(conn, guid, current)
+        log_activity(
+            conn,
+            user,
+            "ab_imported",
+            user["username"] if chosen.personal else chosen.name,
+            f"{added} new, {updated} updated, {skipped} skipped",
+            ip=client_ip(request),
+        )
+    return _ab_page(
+        request,
+        user,
+        conn,
+        chosen,
+        message=_(IMPORT_RESULT, added=added, updated=updated, skipped=skipped),
+    )
 
 
 # Geteilte Adressbücher verwalten (nur Admins)
@@ -1871,6 +2168,8 @@ ACTIVITY = {
     "sso_linked": "Linked the account for single sign-on",
     "device_owner": "Changed the owner of a device",
     "device_deleted": "Removed a device",
+    "ab_imported": "Imported entries into an address book",
+    "ab_exported": "Exported an address book",
     "backup_created": "Created a backup",
     "backup_downloaded": "Downloaded a backup",
     "backup_uploaded": "Uploaded a backup",

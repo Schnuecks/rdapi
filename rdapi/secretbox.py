@@ -47,7 +47,7 @@ def open_(secret_key: str, value: str) -> str:
     try:
         data = base64.urlsafe_b64decode(value[len(PREFIX) :])
         return _aead(secret_key).decrypt(data[:12], data[12:], None).decode()
-    except (ValueError, InvalidTag):
+    except ValueError, InvalidTag:
         return ""
 
 

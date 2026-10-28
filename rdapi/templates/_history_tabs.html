@@ -2,4 +2,5 @@
 <nav class="tabs" aria-label="{{ _('History') }}">
   <a href="/history{{ dq }}"{% if request.url.path == '/history' %} aria-current="page"{% endif %}>{{ _('Connections') }}</a>
   <a href="/history/files{{ dq }}"{% if request.url.path == '/history/files' %} aria-current="page"{% endif %}>{{ _('File transfers') }}</a>
+  <a href="/history/alarms{{ dq }}"{% if request.url.path == '/history/alarms' %} aria-current="page"{% endif %}>{{ _('Alarms') }}</a>
 </nav>

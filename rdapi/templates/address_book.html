@@ -125,6 +125,30 @@
 </div>
 {% endif %}
 
+<div class="panels">
+  <section class="panel" id="transfer">
+    <h2>{{ _('Import and export') }}</h2>
+    {% if peers %}
+    <p class="hint">{{ _('Download the entries with their tags, e.g. to move them to another server or to edit them in a spreadsheet. Passwords saved in the app are not included.') }}</p>
+    <div class="form-actions">
+      <a class="button quiet" href="/address-book/export{{ q }}{{ amp }}format=json" download>{{ _('Export as JSON') }}</a>
+      <a class="button quiet" href="/address-book/export{{ q }}{{ amp }}format=csv" download>{{ _('Export as CSV') }}</a>
+    </div>
+    {% endif %}
+    {% if book.writable %}
+    <form method="post" action="/address-book/import" enctype="multipart/form-data"{% if peers %} class="panel-foot"{% endif %}>
+      <input type="hidden" name="csrf" value="{{ csrf }}">
+      <input type="hidden" name="book" value="{{ '' if book.personal else book.guid }}">
+      <label>{{ _('File to import') }} <input type="file" name="file" accept=".json,.csv,application/json,text/csv" required></label>
+      <p class="hint small">{{ _('A JSON export from RDAPI or a CSV table with the columns id, alias, note, tags, hostname, platform and username; only id is required, several tags are separated by a semicolon. New IDs are added, existing entries are updated and keep their tags, nothing is deleted.') }}</p>
+      <button type="submit">{{ _('Import') }}</button>
+    </form>
+    {% elif not peers %}
+    <p class="hint">{{ _('The address book is still empty.') }}</p>
+    {% endif %}
+  </section>
+</div>
+
 {% if user.is_admin and not book.personal %}
 <div class="panels">
   <section class="panel">
