@@ -1,4 +1,5 @@
-FROM python:3.14-slim
+# Pinned by digest; Dependabot proposes new digests
+FROM python:3.15-slim@sha256:65a65fc7b30b06cb6df4930fd4650697cb23f4c2698ab81fc87e4b031bc36928
 
 # Wird von GitHub Actions beim Release auf den Tag gesetzt (z. B. v0.3.0)
 ARG VERSION=dev
@@ -15,6 +16,10 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 
 WORKDIR /srv
 COPY requirements.txt .
+# Security fixes Debian has published since the base image was built (e.g. zlib)
+RUN apt-get update \
+    && apt-get upgrade -y --no-install-recommends \
+    && rm -rf /var/lib/apt/lists/*
 # pip wird zur Laufzeit nicht gebraucht und bringt eigene, oft veraltete Pakete mit
 # (urllib3, msgpack …), die der Image-Scan meldet: nach der Installation entfernen.
 RUN pip install --no-cache-dir -r requirements.txt \
